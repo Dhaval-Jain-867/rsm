@@ -1,0 +1,9 @@
+[package]
+name = "rsm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = "0.4.44"
+hex = "0.4.3"
+sha2 = "0.11.0"
