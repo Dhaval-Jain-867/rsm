@@ -72,14 +72,14 @@ impl Blockchain {
             None => {
                 // let hash = generate_hash(&data, timestamp, 0, None);
                 let mut new_block = Block::new(0, timestamp, data, String::from("0000000000000000000000000000000000000000000000000000000000000000"));
-                let mut new_block = Block {
-                    index: 0,
-                    timestamp: timestamp,
-                    data: data,
-                    previous_hash: String::from("0000000000000000000000000000000000000000000000000000000000000000"),
-                    hash: String::from(""),
-                    nonce: 0
-                };
+                // let mut new_block = Block {
+                //     index: 0,
+                //     timestamp: timestamp,
+                //     data: data,
+                //     previous_hash: String::from("0000000000000000000000000000000000000000000000000000000000000000"),
+                //     hash: String::from(""),
+                //     nonce: 0
+                // };
                 new_block.mine();
                 self.chain.push(new_block);
             }
