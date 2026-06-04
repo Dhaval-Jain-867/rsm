@@ -1,13 +1,13 @@
 use chrono::Utc;
 use sha2::{Sha256, Digest};
 use hex;
-use borsh::BorshSerialize;
+use borsh;
 
-use crate::transaction::{self, Transaction};
+use crate::transaction::{Transaction, TransactionEnvelope};
 use crate::balances::Balance;
 
 
-fn generate_hash(data: &Vec<Transaction>, timestamp: i64, index: u128, previous_hash: Option<&str>, nonce: u128) -> String {
+fn generate_hash(data: &Vec<TransactionEnvelope>, timestamp: i64, index: u128, previous_hash: Option<&str>, nonce: u128) -> String {
     let last_hash = previous_hash.unwrap_or("0000000000000000000000000000000000000000000000000000000000000000");
     let mut hasher = Sha256::new();
     let data_bytes = borsh::to_vec(data).expect("Failed to serialize transactions");
@@ -39,7 +39,7 @@ fn is_hash_valid(hash: &str, difficulty: u8) -> bool {
 pub struct Block {
     pub index: u128,
     pub timestamp: i64,
-    pub data: Vec<Transaction>,
+    pub data: Vec<TransactionEnvelope>,
     pub previous_hash: String,
     pub hash: String,
     pub nonce: u128,
@@ -58,15 +58,13 @@ impl Blockchain {
         }
     }
 
-    pub fn add_block(&mut self, data: Vec<Transaction>) -> Result<String, String>{
-        // check for each transaction
-        // trying to implement all the transactions
+    pub fn add_block(&mut self, data: Vec<TransactionEnvelope>) -> Result<String, String>{
         let mut state_clone = self.balance.clone();
-        for transaction in &data {
-            if !transaction.is_valid(&state_clone) {
+        for transaction_envelope in &data {
+            if !transaction_envelope.is_valid(&state_clone) {
                 return Err(String::from("An invalid transaction was present in the block"));
             }
-            state_clone.transfer(transaction);
+            state_clone.transfer(&transaction_envelope.payload);
         }
         
         let last_block = self.chain.last();
@@ -116,7 +114,7 @@ impl Blockchain {
 }
 
 impl Block {
-    pub fn new(index: u128, timestamp: i64, data: Vec<Transaction>, previous_hash: String) -> Self {
+    pub fn new(index: u128, timestamp: i64, data: Vec<TransactionEnvelope>, previous_hash: String) -> Self {
         Self {
             index: index,
             timestamp: timestamp,
