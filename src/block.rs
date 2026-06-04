@@ -3,7 +3,7 @@ use sha2::{Sha256, Digest};
 use hex;
 use borsh::BorshSerialize;
 
-use crate::transaction::Transaction;
+use crate::transaction::{self, Transaction};
 use crate::balances::Balance;
 
 
@@ -46,32 +46,47 @@ pub struct Block {
 }
 
 pub struct Blockchain {
+    pub balance: Balance,
     pub chain: Vec<Block>,
 }
 
 impl Blockchain {
     pub fn new() -> Self {
         Self {
+            balance: Balance::new(),
             chain: Vec::new()
         }
     }
 
-    pub fn add_block(&mut self, data: Vec<Transaction>) {
+    pub fn add_block(&mut self, data: Vec<Transaction>) -> Result<String, String>{
+        // check for each transaction
+        // trying to implement all the transactions
+        let mut state_clone = self.balance.clone();
+        for transaction in &data {
+            if !transaction.is_valid(&state_clone) {
+                return Err(String::from("An invalid transaction was present in the block"));
+            }
+            state_clone.transfer(transaction);
+        }
+        
         let last_block = self.chain.last();
         let timestamp = Utc::now().timestamp();
 
         match last_block {
             Some(l_block) => {
-                let mut new_block = Block::new(l_block.index + 1, timestamp, data, l_block.hash.clone());
+                let mut new_block = Block::new(l_block.index + 1, timestamp, data.clone(), l_block.hash.clone());
                 new_block.mine();
                 self.chain.push(new_block);
             }
             None => {
-                let mut new_block = Block::new(0, timestamp, data, String::from("0000000000000000000000000000000000000000000000000000000000000000"));
+                let mut new_block = Block::new(0, timestamp, data.clone(), String::from("0000000000000000000000000000000000000000000000000000000000000000"));
                 new_block.mine();
                 self.chain.push(new_block);
             }
         }
+
+        self.balance = state_clone;
+        return Ok(String::from("Block successfully mined"));
     }
 
     pub fn is_valid(&self) -> bool {
@@ -93,6 +108,10 @@ impl Blockchain {
             }
         }
         return true;
+    }
+
+    pub fn mint(&mut self, amount: u64, address: [u8; 32]) {
+        *self.balance.accounts.entry(address).or_insert(0) += amount;
     }
 }
 

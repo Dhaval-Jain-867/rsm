@@ -1,27 +1,37 @@
 use std::collections::HashMap;
 
+use crate::transaction::Transaction;
+
+#[derive(Clone)]
 pub struct Balance {
-    pub balances: HashMap<[u8; 32], u64>
+    pub accounts: HashMap<[u8; 32], u64>
 }
 
 impl Balance {
     pub fn new() -> Self {
         Self {
-            balances: HashMap::new()
+            accounts: HashMap::new()
         }
     }
 
     pub fn set_balance(&mut self, name: [u8; 32], amount: u64) {
-        self.balances.insert(name, amount);
+        self.accounts.insert(name, amount);
     }
 
     pub fn get_balance(&self, name: [u8; 32]) -> u64 {
-        let balance = self.balances.get(&name);
+        let balance = self.accounts.get(&name);
         match balance {
             Some(value) => *value,
             None => {
                 return 0;
             }
         }
+    }
+
+    pub fn transfer(&mut self, transaction: &Transaction) {
+        if let Some(balance) = self.accounts.get_mut(&transaction.payer) {
+            *balance -= transaction.amount;
+        }
+        *self.accounts.entry(transaction.reciever).or_insert(0) += transaction.amount;
     }
 }
