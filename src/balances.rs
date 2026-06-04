@@ -1,22 +1,22 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
-pub struct Pallet {
-    pub balances: BTreeMap<String, u128>
+pub struct Balance {
+    pub balances: HashMap<[u8; 32], u64>
 }
 
-impl Pallet {
+impl Balance {
     pub fn new() -> Self {
         Self {
-            balances: BTreeMap::new()
+            balances: HashMap::new()
         }
     }
 
-    pub fn set_balance(&mut self, name: String, amount: u128) {
+    pub fn set_balance(&mut self, name: [u8; 32], amount: u64) {
         self.balances.insert(name, amount);
     }
 
-    pub fn get_balance(&self, name: &String) -> u128 {
-        let balance = self.balances.get(name);
+    pub fn get_balance(&self, name: [u8; 32]) -> u64 {
+        let balance = self.balances.get(&name);
         match balance {
             Some(value) => *value,
             None => {

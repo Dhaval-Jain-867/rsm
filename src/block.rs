@@ -1,11 +1,17 @@
 use chrono::Utc;
 use sha2::{Sha256, Digest};
 use hex;
+use borsh::BorshSerialize;
 
-fn generate_hash(data: &str, timestamp: i64, index: u128, previous_hash: Option<&str>, nonce: u128) -> String {
+use crate::transaction::Transaction;
+use crate::balances::Balance;
+
+
+fn generate_hash(data: &Vec<Transaction>, timestamp: i64, index: u128, previous_hash: Option<&str>, nonce: u128) -> String {
     let last_hash = previous_hash.unwrap_or("0000000000000000000000000000000000000000000000000000000000000000");
     let mut hasher = Sha256::new();
-    hasher.update(data.as_bytes());
+    let data_bytes = borsh::to_vec(data).expect("Failed to serialize transactions");
+    hasher.update(data_bytes);
     hasher.update(timestamp.to_be_bytes());
     hasher.update(index.to_be_bytes());
     hasher.update(last_hash);
@@ -22,7 +28,7 @@ fn is_hash_valid(hash: &str, difficulty: u8) -> bool {
     }
     let mut hash_str = String::from("");
     for i in 0..difficulty {
-        hash_str.chars().nth(i as usize);
+        hash_str.push(hash.chars().nth(i as usize).unwrap());  
     }
     if hash_str == test_str {
         return true;
@@ -33,7 +39,7 @@ fn is_hash_valid(hash: &str, difficulty: u8) -> bool {
 pub struct Block {
     pub index: u128,
     pub timestamp: i64,
-    pub data: String,
+    pub data: Vec<Transaction>,
     pub previous_hash: String,
     pub hash: String,
     pub nonce: u128,
@@ -50,36 +56,18 @@ impl Blockchain {
         }
     }
 
-    pub fn add_block(&mut self, data: String) {
+    pub fn add_block(&mut self, data: Vec<Transaction>) {
         let last_block = self.chain.last();
         let timestamp = Utc::now().timestamp();
 
         match last_block {
             Some(l_block) => {
-                // let hash = generate_hash(&data, timestamp, l_block.index + 1, Some(&l_block.hash));
                 let mut new_block = Block::new(l_block.index + 1, timestamp, data, l_block.hash.clone());
-                // let mut new_block = Block {
-                //     index: l_block.index + 1,
-                //     timestamp: timestamp,
-                //     data: data,
-                //     previous_hash: l_block.hash.clone(),
-                //     hash: String::from(""),
-                //     nonce: 0
-                // };
                 new_block.mine();
                 self.chain.push(new_block);
             }
             None => {
-                // let hash = generate_hash(&data, timestamp, 0, None);
                 let mut new_block = Block::new(0, timestamp, data, String::from("0000000000000000000000000000000000000000000000000000000000000000"));
-                // let mut new_block = Block {
-                //     index: 0,
-                //     timestamp: timestamp,
-                //     data: data,
-                //     previous_hash: String::from("0000000000000000000000000000000000000000000000000000000000000000"),
-                //     hash: String::from(""),
-                //     nonce: 0
-                // };
                 new_block.mine();
                 self.chain.push(new_block);
             }
@@ -109,7 +97,7 @@ impl Blockchain {
 }
 
 impl Block {
-    pub fn new(index: u128, timestamp: i64, data: String, previous_hash: String) -> Self {
+    pub fn new(index: u128, timestamp: i64, data: Vec<Transaction>, previous_hash: String) -> Self {
         Self {
             index: index,
             timestamp: timestamp,
@@ -119,6 +107,7 @@ impl Block {
             nonce: 0
         }
     }
+
     pub fn is_valid(&self) -> bool {
         if self.hash == self.calculate_hash(self.nonce) && is_hash_valid(&self.hash, 3) {
             return true;
