@@ -40,7 +40,7 @@ impl Wallet {
         }
     }
 
-    pub fn transact(&self, to: [u8; 32], amount: u64, blockchain: &mut Blockchain) -> Result<&str, &str> {
+    pub fn create_transaction(&self, to: [u8; 32], amount: u64) -> TransactionEnvelope {
         let payload = Transaction {
             payer: self.public_key,
             reciever: to,
@@ -48,11 +48,6 @@ impl Wallet {
         };
 
         let transaction = self.sign_transaction(payload);
-
-        if transaction.verify_signature() {
-            blockchain.mempool.push_back(transaction);
-            return Ok("Transaction sent successfully");
-        }
-        Err("An invalid transaction was sent")
+        return transaction;
     }
 }

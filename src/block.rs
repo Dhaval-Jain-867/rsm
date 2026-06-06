@@ -34,19 +34,19 @@ impl Blockchain {
         }
     }
 
-    pub fn add_block(&mut self, block: Block) -> Result<String, String>{
+    pub fn add_block(&mut self, block: Block, total_count: usize) -> Result<String, String>{
+        let mut state_clone = self.balance.clone();
         for transaction in &block.data {
-            if !transaction.is_valid(&self.balance) {
-                return Err(String::from("Invalid transaction"));
+            if !transaction.is_valid(&state_clone) {
+                return Err(String::from("An invalid transaction was present in the block"));
             }
-        }
-
-        for transaction in &block.data {
-            self.balance.transfer(&transaction.payload);
+            state_clone.transfer(&transaction.payload);
         }
 
         if block.is_valid() {
             self.chain.push(block);
+            self.balance = state_clone;
+            self.mempool.drain(0..total_count);
             return Ok(String::from("Block successfully mined"));
         }
 
@@ -76,6 +76,14 @@ impl Blockchain {
 
     pub fn mint(&mut self, amount: u64, address: [u8; 32]) {
         *self.balance.accounts.entry(address).or_insert(0) += amount;
+    }
+
+    pub fn submit_transaction(&mut self, transaction_envelope: TransactionEnvelope) -> Result<String, String>{
+        if transaction_envelope.is_valid(&self.balance.clone()) {
+            self.mempool.push_back(transaction_envelope);
+            return Ok(String::from("Transaction added to mempool"));
+        }
+        return Err(String::from("Can't enter mempool since transaction was invalid"));
     }
 }
 

@@ -25,16 +25,22 @@ impl Miner {
         }
     }
 
-    pub fn mine_block(&self, blockchain: &mut Blockchain) -> Block {
+    pub fn mine_block(&self, blockchain: &mut Blockchain) -> (Block, usize) {
         let mut state_clone = blockchain.balance.clone();
-        let mut count = 0;
+        let mut valid_count = 0;
+        let mut total_count = 0;
         let mut block_data: Vec<TransactionEnvelope> = Vec::new();
-        while count < MAX_TX_PER_BLOCK && !blockchain.mempool.is_empty() {
-            let transaction_envelope = blockchain.mempool.pop_front().unwrap();
+        for transaction_envelope in blockchain.mempool.iter() {
+            // let transaction_envelope = blockchain.mempool.pop_front().unwrap();
+            total_count += 1;
             if transaction_envelope.is_valid(&state_clone) {
                 state_clone.transfer(&transaction_envelope.payload);
-                block_data.push(transaction_envelope);
-                count += 1;
+                block_data.push(transaction_envelope.clone());
+                valid_count += 1;
+            }
+
+            if valid_count == MAX_TX_PER_BLOCK {
+                break;
             }
         }
 
@@ -54,7 +60,7 @@ impl Miner {
         }
         let final_block = Miner::hash_block(&mut new_block);
 
-        final_block.clone()
+        return (final_block.clone(), total_count as usize);
     }
 
     pub fn hash_block(block: &mut Block) -> &Block {
