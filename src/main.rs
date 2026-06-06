@@ -2,6 +2,8 @@ mod balances;
 mod block;
 mod transaction;
 mod wallet;
+mod miner;
+mod hash;
 
 fn main() {
     println!("Hello, world!");
@@ -153,4 +155,41 @@ fn init_transactions() {
     assert_eq!(new_blockchain.balance.accounts[&wallet_alice.public_key], 10);
     assert_eq!(new_blockchain.balance.accounts[&wallet_bob.public_key], 60);
     assert_eq!(new_blockchain.balance.accounts[&wallet_dave.public_key], 30);
+}
+
+#[test]
+fn init_signatures() {
+    let mut new_blockchain = block::Blockchain::new();
+
+    let wallet_alice = wallet::Wallet::new();
+    let wallet_bob = wallet::Wallet::new();
+    let wallet_charlie = wallet::Wallet::new();
+    let wallet_dave = wallet::Wallet::new();
+
+    let mut test_data = Vec::new();
+
+    new_blockchain.mint(100, wallet_alice.public_key);
+
+    let trans_1 = transaction::Transaction {
+        payer: wallet_alice.public_key,
+        reciever: wallet_bob.public_key,
+        amount: 60,
+    };
+    test_data.push(wallet_alice.sign_transaction(trans_1));
+    assert!(test_data[0].verify_signature());
+
+    test_data[0].payload.amount = 50;
+    assert!(!test_data[0].verify_signature());
+
+    test_data[0].payload.amount = 60;
+    test_data[0].payload.reciever = [1; 32];
+    assert!(!test_data[0].verify_signature());
+    
+    test_data[0].payload.reciever = wallet_bob.public_key;
+    test_data[0].payload.payer = wallet_charlie.public_key;
+    assert!(!test_data[0].verify_signature());
+    
+    test_data[0].payload.payer = wallet_alice.public_key;
+    test_data[0].signature = [1; 64];
+    assert!(new_blockchain.add_block(test_data).is_err());
 }

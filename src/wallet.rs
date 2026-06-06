@@ -3,7 +3,7 @@ use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use getrandom;
 use hex;
 
-use crate::transaction::{Transaction, TransactionEnvelope};
+use crate::{block::Blockchain, transaction::{Transaction, TransactionEnvelope}};
 
 pub struct Wallet {
     pub public_key: [u8; 32],
@@ -38,5 +38,21 @@ impl Wallet {
             payload: payload,
             signature: signature_bytes
         }
+    }
+
+    pub fn transact(&self, to: [u8; 32], amount: u64, blockchain: &mut Blockchain) -> Result<&str, &str> {
+        let payload = Transaction {
+            payer: self.public_key,
+            reciever: to,
+            amount: amount
+        };
+
+        let transaction = self.sign_transaction(payload);
+
+        if transaction.verify_signature() {
+            blockchain.mempool.push_back(transaction);
+            return Ok("Transaction sent successfully");
+        }
+        Err("An invalid transaction was sent")
     }
 }
