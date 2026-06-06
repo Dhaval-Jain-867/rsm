@@ -4,7 +4,7 @@ use getrandom;
 
 use crate::{block::{Block, Blockchain}, hash, transaction::TransactionEnvelope};
 
-const MAX_TX_PER_BLOCK: usize = 5;
+const MAX_TX_PER_BLOCK: usize = 3;
 
 pub struct Miner {
     pub public_key: [u8; 32],
