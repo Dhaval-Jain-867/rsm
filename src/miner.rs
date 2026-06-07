@@ -1,9 +1,13 @@
 use chrono::Utc;
-use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
+use ed25519_dalek::SigningKey;
 use getrandom;
 use std::env;
 
-use crate::{block::{Block, Blockchain}, hash, transaction::{CoinbaseTransaction, TransactionEnvelope}};
+use crate::{
+    block::{Block, Blockchain},
+    hash,
+    transaction::{CoinbaseTransaction, TransactionEnvelope},
+};
 
 // const MAX_TX_PER_BLOCK: usize = 3;
 // const PER_TX_REWARD: u64 = 50;
@@ -35,17 +39,22 @@ impl Miner {
         let mut block_data: Vec<TransactionEnvelope> = Vec::new();
         let mut coinbase_transaction = CoinbaseTransaction {
             receiver: self.public_key,
-            amount: env::var("PER_TX_REWARD").unwrap().parse().unwrap()
+            amount: env::var("PER_TX_REWARD").unwrap().parse().unwrap(),
         };
+        let max_tx: usize = env::var("MAX_TX_PER_BLOCK").unwrap().parse().unwrap();
         for transaction_envelope in blockchain.mempool.iter() {
             total_count += 1;
             if transaction_envelope.is_valid(&state_clone) {
                 state_clone.transfer(&transaction_envelope.payload);
                 block_data.push(transaction_envelope.clone());
                 valid_count += 1;
+                coinbase_transaction.amount = coinbase_transaction
+                    .amount
+                    .checked_add(transaction_envelope.payload.fees)
+                    .unwrap();
             }
 
-            if valid_count == env::var("MAX_TX_PER_BLOCK").unwrap().parse().unwrap() {
+            if valid_count == max_tx {
                 break;
             }
         }
@@ -53,7 +62,13 @@ impl Miner {
         let last_block = blockchain.chain.last();
         let timestamp = Utc::now().timestamp();
 
-        let mut new_block = Block::new(0, timestamp, coinbase_transaction, block_data, String::from("0000000000000000000000000000000000000000000000000000000000000000"));
+        let mut new_block = Block::new(
+            0,
+            timestamp,
+            coinbase_transaction,
+            block_data,
+            String::from("0000000000000000000000000000000000000000000000000000000000000000"),
+        );
         match last_block {
             Some(l_block) => {
                 // let new_block = Block::new(l_block.index + 1, timestamp, block_data, l_block.hash.clone());
@@ -71,7 +86,10 @@ impl Miner {
         let mut nonce = 0;
         loop {
             let our_hash = block.calculate_hash(nonce);
-            if hash::is_hash_valid(&our_hash, env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap()) {
+            if hash::is_hash_valid(
+                &our_hash,
+                env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap(),
+            ) {
                 block.hash = our_hash;
                 block.nonce = nonce;
                 break;

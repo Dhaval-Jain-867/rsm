@@ -1,9 +1,11 @@
+use std::env;
+
 use borsh;
-use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
+use ed25519_dalek::{Signer, SigningKey};
 use getrandom;
 use hex;
 
-use crate::{block::Blockchain, transaction::{Transaction, TransactionEnvelope}};
+use crate::{transaction::{Transaction, TransactionEnvelope}};
 
 pub struct Wallet {
     pub public_key: [u8; 32],
@@ -44,7 +46,8 @@ impl Wallet {
         let payload = Transaction {
             payer: self.public_key,
             receiver: to,
-            amount: amount
+            amount: amount,
+            fees: (amount * env::var("FEES_PERCENT").unwrap().parse::<u64>().unwrap()) / 100
         };
 
         let transaction = self.sign_transaction(payload);

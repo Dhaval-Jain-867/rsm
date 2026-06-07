@@ -30,7 +30,7 @@ impl Balance {
 
     pub fn transfer(&mut self, transaction: &Transaction) {
         if let Some(balance) = self.accounts.get_mut(&transaction.payer) {
-            *balance -= transaction.amount;
+            *balance -= transaction.amount.checked_add(transaction.fees).unwrap();
         }
         *self.accounts.entry(transaction.receiver).or_insert(0) += transaction.amount;
     }

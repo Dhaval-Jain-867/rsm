@@ -5,8 +5,6 @@ mod miner;
 mod transaction;
 mod wallet;
 
-use dotenvy::dotenv;
-
 fn main() {
     println!("Hello, world!");
 }

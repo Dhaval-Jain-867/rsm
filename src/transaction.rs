@@ -8,6 +8,7 @@ pub struct Transaction {
     pub payer: [u8; 32],
     pub receiver: [u8; 32],
     pub amount: u64,
+    pub fees: u64,
 }
 
 #[derive(BorshSerialize, Clone)]
@@ -24,7 +25,7 @@ pub struct CoinbaseTransaction {
 
 impl Transaction {
     pub fn is_valid(&self, balances: &Balance) -> bool {
-        balances.accounts.contains_key(&self.payer) && balances.accounts[&self.payer] >= self.amount && self.amount > 0
+        balances.accounts.contains_key(&self.payer) && balances.accounts[&self.payer] >= self.amount.checked_add(self.fees).unwrap() && self.amount > 0
     }
 }
 
