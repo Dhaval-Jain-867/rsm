@@ -94,7 +94,7 @@ fn init_transactions() {
     // Alice -> Bob : 60
     let trans_1 = transaction::Transaction {
         payer: wallet_alice.public_key,
-        reciever: wallet_bob.public_key,
+        receiver: wallet_bob.public_key,
         amount: 60,
     };
 
@@ -111,7 +111,7 @@ fn init_transactions() {
     // Alice tries to send another 60 (should fail)
     let trans_2 = transaction::Transaction {
         payer: wallet_alice.public_key,
-        reciever: wallet_bob.public_key,
+        receiver: wallet_bob.public_key,
         amount: 60,
     };
 
@@ -125,7 +125,7 @@ fn init_transactions() {
     // Double spend inside same block
     let trans_3 = transaction::Transaction {
         payer: wallet_alice.public_key,
-        reciever: wallet_bob.public_key,
+        receiver: wallet_bob.public_key,
         amount: 30,
     };
 
@@ -144,7 +144,7 @@ fn init_transactions() {
     // Charlie has no balance
     let trans_4 = transaction::Transaction {
         payer: wallet_charlie.public_key,
-        reciever: wallet_bob.public_key,
+        receiver: wallet_bob.public_key,
         amount: 30,
     };
 
@@ -157,7 +157,7 @@ fn init_transactions() {
     // Alice now has only 10, tries to send 30
     let trans_5 = transaction::Transaction {
         payer: wallet_alice.public_key,
-        reciever: wallet_dave.public_key,
+        receiver: wallet_dave.public_key,
         amount: 30,
     };
 
@@ -185,7 +185,7 @@ fn init_signatures() {
 
     let trans_1 = transaction::Transaction {
         payer: wallet_alice.public_key,
-        reciever: wallet_bob.public_key,
+        receiver: wallet_bob.public_key,
         amount: 60,
     };
     test_data.push(wallet_alice.sign_transaction(trans_1));
@@ -195,10 +195,10 @@ fn init_signatures() {
     assert!(!test_data[0].verify_signature());
 
     test_data[0].payload.amount = 60;
-    test_data[0].payload.reciever = [1; 32];
+    test_data[0].payload.receiver = [1; 32];
     assert!(!test_data[0].verify_signature());
 
-    test_data[0].payload.reciever = wallet_bob.public_key;
+    test_data[0].payload.receiver = wallet_bob.public_key;
     test_data[0].payload.payer = wallet_charlie.public_key;
     assert!(!test_data[0].verify_signature());
 
@@ -217,8 +217,6 @@ fn init_miner() {
 
     let wallet_alice = wallet::Wallet::new();
     let wallet_bob = wallet::Wallet::new();
-    let wallet_charlie = wallet::Wallet::new();
-    let wallet_dave = wallet::Wallet::new();
 
     let miner_crazy = miner::Miner::new();
 
@@ -241,4 +239,31 @@ fn init_miner() {
     assert_eq!(new_blockchain.chain.len(), 1);
     assert!(new_blockchain.chain[0].is_valid());
     assert_eq!(new_blockchain.mempool.len(), 1);
+}
+
+#[test]
+fn mining_rewards() {
+    let mut new_blockchain = block::Blockchain::new();
+
+    let wallet_alice = wallet::Wallet::new();
+    let wallet_bob = wallet::Wallet::new();
+
+    let miner_crazy = miner::Miner::new();
+
+    new_blockchain.mint(100, wallet_alice.public_key);
+    let tx1 = wallet_alice.create_transaction(wallet_bob.public_key, 10);
+    new_blockchain.submit_transaction(tx1.clone());
+    new_blockchain.submit_transaction(tx1.clone());
+    new_blockchain.submit_transaction(tx1.clone());
+    new_blockchain.submit_transaction(tx1);
+
+    let (new_block, to_rem) = miner_crazy.mine_block(&mut new_blockchain);
+    new_blockchain.add_block(new_block, to_rem);
+
+    assert_eq!(new_blockchain.balance.accounts[&miner_crazy.public_key], 50);
+
+     let (new_block, to_rem) = miner_crazy.mine_block(&mut new_blockchain);
+    new_blockchain.add_block(new_block, to_rem);
+
+    assert_eq!(new_blockchain.balance.accounts[&miner_crazy.public_key], 100);
 }

@@ -5,14 +5,17 @@ use sha2::{Sha256, Digest};
 use hex;
 use borsh;
 
-use crate::transaction::{Transaction, TransactionEnvelope};
+use crate::transaction::{CoinbaseTransaction, Transaction, TransactionEnvelope};
 use crate::balances::Balance;
 use crate::hash;
+
+const PER_TX_REWARD: u64 = 50;
 
 #[derive(Clone)]
 pub struct Block {
     pub index: u128,
     pub timestamp: i64,
+    pub reward: CoinbaseTransaction,
     pub data: Vec<TransactionEnvelope>,
     pub previous_hash: String,
     pub hash: String,
@@ -43,7 +46,8 @@ impl Blockchain {
             state_clone.transfer(&transaction.payload);
         }
 
-        if block.is_valid() {
+        if block.is_valid() && block.reward.amount == PER_TX_REWARD {
+            *state_clone.accounts.entry(block.reward.receiver).or_insert(0) += block.reward.amount;
             self.chain.push(block);
             self.balance = state_clone;
             self.mempool.drain(0..total_count);
@@ -89,10 +93,11 @@ impl Blockchain {
 
 
 impl Block {
-    pub fn new(index: u128, timestamp: i64, data: Vec<TransactionEnvelope>, previous_hash: String) -> Self {
+    pub fn new(index: u128, timestamp: i64, reward: CoinbaseTransaction, data: Vec<TransactionEnvelope>, previous_hash: String) -> Self {
         Self {
             index: index,
             timestamp: timestamp,
+            reward: reward,
             data: data,
             previous_hash: previous_hash,
             hash: String::from(""),
@@ -108,6 +113,6 @@ impl Block {
     }
 
     pub fn calculate_hash(&self, nonce: u128) -> String {
-        hash::generate_hash(&self.data, self.timestamp, self.index, Some(&self.previous_hash), nonce)
+        hash::generate_hash(&self.reward, &self.data, self.timestamp, self.index, Some(&self.previous_hash), nonce)
     }
 }

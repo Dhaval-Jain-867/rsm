@@ -2,9 +2,10 @@ use chrono::Utc;
 use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use getrandom;
 
-use crate::{block::{Block, Blockchain}, hash, transaction::TransactionEnvelope};
+use crate::{block::{Block, Blockchain}, hash, transaction::{CoinbaseTransaction, TransactionEnvelope}};
 
 const MAX_TX_PER_BLOCK: usize = 3;
+const PER_TX_REWARD: u64 = 50;
 
 pub struct Miner {
     pub public_key: [u8; 32],
@@ -30,8 +31,11 @@ impl Miner {
         let mut valid_count = 0;
         let mut total_count = 0;
         let mut block_data: Vec<TransactionEnvelope> = Vec::new();
+        let mut coinbase_transaction = CoinbaseTransaction {
+            receiver: self.public_key,
+            amount: PER_TX_REWARD
+        };
         for transaction_envelope in blockchain.mempool.iter() {
-            // let transaction_envelope = blockchain.mempool.pop_front().unwrap();
             total_count += 1;
             if transaction_envelope.is_valid(&state_clone) {
                 state_clone.transfer(&transaction_envelope.payload);
@@ -47,16 +51,14 @@ impl Miner {
         let last_block = blockchain.chain.last();
         let timestamp = Utc::now().timestamp();
 
-        let mut new_block = Block::new(0, timestamp, block_data, String::from("0000000000000000000000000000000000000000000000000000000000000000"));
+        let mut new_block = Block::new(0, timestamp, coinbase_transaction, block_data, String::from("0000000000000000000000000000000000000000000000000000000000000000"));
         match last_block {
             Some(l_block) => {
                 // let new_block = Block::new(l_block.index + 1, timestamp, block_data, l_block.hash.clone());
                 new_block.index = l_block.index + 1;
                 new_block.previous_hash = l_block.hash.clone();
             }
-            None => {
-
-            }
+            None => {}
         }
         let final_block = Miner::hash_block(&mut new_block);
 

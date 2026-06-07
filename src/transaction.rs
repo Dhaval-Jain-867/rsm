@@ -6,7 +6,7 @@ use ed25519_dalek::{VerifyingKey, Signature, Verifier};
 #[derive(BorshSerialize, Clone)]
 pub struct Transaction {
     pub payer: [u8; 32],
-    pub reciever: [u8; 32],
+    pub receiver: [u8; 32],
     pub amount: u64,
 }
 
@@ -14,6 +14,12 @@ pub struct Transaction {
 pub struct TransactionEnvelope {
     pub payload: Transaction,
     pub signature: [u8; 64]
+}
+
+#[derive(BorshSerialize, Clone)]
+pub struct CoinbaseTransaction {
+    pub receiver: [u8; 32],
+    pub amount: u64
 }
 
 impl Transaction {

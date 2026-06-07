@@ -32,6 +32,6 @@ impl Balance {
         if let Some(balance) = self.accounts.get_mut(&transaction.payer) {
             *balance -= transaction.amount;
         }
-        *self.accounts.entry(transaction.reciever).or_insert(0) += transaction.amount;
+        *self.accounts.entry(transaction.receiver).or_insert(0) += transaction.amount;
     }
 }

@@ -43,7 +43,7 @@ impl Wallet {
     pub fn create_transaction(&self, to: [u8; 32], amount: u64) -> TransactionEnvelope {
         let payload = Transaction {
             payer: self.public_key,
-            reciever: to,
+            receiver: to,
             amount: amount
         };
 
