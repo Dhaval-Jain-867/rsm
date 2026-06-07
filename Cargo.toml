@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 borsh = { version = "1.6.1", features = ["derive"] }
 chrono = "0.4.44"
+dotenvy = "0.15.7"
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 getrandom = "0.4.2"
 hex = "0.4.3"

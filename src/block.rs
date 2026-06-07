@@ -4,12 +4,12 @@ use chrono::Utc;
 use sha2::{Sha256, Digest};
 use hex;
 use borsh;
+use std::env;
 
 use crate::transaction::{CoinbaseTransaction, Transaction, TransactionEnvelope};
 use crate::balances::Balance;
 use crate::hash;
 
-const PER_TX_REWARD: u64 = 50;
 
 #[derive(Clone)]
 pub struct Block {
@@ -46,7 +46,7 @@ impl Blockchain {
             state_clone.transfer(&transaction.payload);
         }
 
-        if block.is_valid() && block.reward.amount == PER_TX_REWARD {
+        if block.is_valid() && block.reward.amount == env::var("PER_TX_REWARD").unwrap().parse().unwrap() {
             *state_clone.accounts.entry(block.reward.receiver).or_insert(0) += block.reward.amount;
             self.chain.push(block);
             self.balance = state_clone;

@@ -1,11 +1,13 @@
 use chrono::Utc;
 use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use getrandom;
+use std::env;
 
 use crate::{block::{Block, Blockchain}, hash, transaction::{CoinbaseTransaction, TransactionEnvelope}};
 
-const MAX_TX_PER_BLOCK: usize = 3;
-const PER_TX_REWARD: u64 = 50;
+// const MAX_TX_PER_BLOCK: usize = 3;
+// const PER_TX_REWARD: u64 = 50;
+// const NONCE_DIFFICULTY: u8 = 3;
 
 pub struct Miner {
     pub public_key: [u8; 32],
@@ -33,7 +35,7 @@ impl Miner {
         let mut block_data: Vec<TransactionEnvelope> = Vec::new();
         let mut coinbase_transaction = CoinbaseTransaction {
             receiver: self.public_key,
-            amount: PER_TX_REWARD
+            amount: env::var("PER_TX_REWARD").unwrap().parse().unwrap()
         };
         for transaction_envelope in blockchain.mempool.iter() {
             total_count += 1;
@@ -43,7 +45,7 @@ impl Miner {
                 valid_count += 1;
             }
 
-            if valid_count == MAX_TX_PER_BLOCK {
+            if valid_count == env::var("MAX_TX_PER_BLOCK").unwrap().parse().unwrap() {
                 break;
             }
         }
@@ -69,7 +71,7 @@ impl Miner {
         let mut nonce = 0;
         loop {
             let our_hash = block.calculate_hash(nonce);
-            if hash::is_hash_valid(&our_hash, 3) {
+            if hash::is_hash_valid(&our_hash, env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap()) {
                 block.hash = our_hash;
                 block.nonce = nonce;
                 break;
