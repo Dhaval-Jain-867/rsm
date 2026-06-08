@@ -1,13 +1,16 @@
-use std::collections::VecDeque;
 use chrono::Utc;
-use std::env;
+use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
+use std::error::Error;
+use std::path::Path;
+use std::{env, fs};
 
 use crate::balances::Balance;
 use crate::hash;
 use crate::transaction::{CoinbaseTransaction, TransactionEnvelope};
 use crate::wallet::Wallet;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Block {
     pub index: u128,
     pub timestamp: i64,
@@ -42,7 +45,9 @@ impl Blockchain {
     pub fn add_block(&mut self, block: Block, total_count: usize) -> Result<String, String> {
         // safety check but pratically impossible
         if self.chain.is_empty() {
-            return Err(String::from("Genesis block should be minted before adding any other block"));
+            return Err(String::from(
+                "Genesis block should be minted before adding any other block",
+            ));
         }
         let mut state_clone = self.balance.clone();
 
@@ -55,7 +60,9 @@ impl Blockchain {
                 ));
             }
             state_clone.transfer(&transaction.payload);
-            predicted_reward = predicted_reward.checked_add(transaction.payload.fees).unwrap();
+            predicted_reward = predicted_reward
+                .checked_add(transaction.payload.fees)
+                .unwrap();
         }
 
         if block.is_valid() && block.reward.amount == predicted_reward {
@@ -84,7 +91,7 @@ impl Blockchain {
             amount: initial_amount,
         };
         let timestamp = Utc::now().timestamp();
-        let block_data  = Vec::new();
+        let block_data = Vec::new();
         let mut new_block = Block::new(
             0,
             timestamp,
@@ -96,16 +103,22 @@ impl Blockchain {
 
         // self.add_block(*final_block, 0);
         if final_block.is_valid() {
-            *self.balance.accounts.entry(final_block.reward.receiver).or_insert(0) += final_block.reward.amount;
+            *self
+                .balance
+                .accounts
+                .entry(final_block.reward.receiver)
+                .or_insert(0) += final_block.reward.amount;
             self.chain.push(final_block.clone());
             return Ok(genesis_wallet);
         }
-        return Err(String::from("An error occurred while creating the genesis block"));
+        return Err(String::from(
+            "An error occurred while creating the genesis block",
+        ));
     }
 
     pub fn is_valid(&self) -> bool {
         let chain_length = self.chain.len();
-        if chain_length == 0 || self.chain[0].index != 0{
+        if chain_length == 0 || self.chain[0].index != 0 {
             return false;
         }
         for i in 0..chain_length {
@@ -127,9 +140,9 @@ impl Blockchain {
         return true;
     }
 
-    pub fn mint(&mut self, amount: u64, address: [u8; 32]) {
-        *self.balance.accounts.entry(address).or_insert(0) += amount;
-    }
+    // pub fn mint(&mut self, amount: u64, address: [u8; 32]) {
+    //     *self.balance.accounts.entry(address).or_insert(0) += amount;
+    // }
 
     pub fn submit_transaction(
         &mut self,
@@ -144,12 +157,22 @@ impl Blockchain {
         ));
     }
 
-    pub fn rebuild_state(&self) -> Result<Balance, String> {
+    pub fn rebuild_state(chain: &Vec<Block>) -> Result<Balance, String> {
         let mut new_state = Balance::new();
-        for block in self.chain.iter() {
+        for block in chain.iter() {
             let miner_address = block.reward.receiver;
-            let miner_award = block.reward.amount;
-            *new_state.accounts.entry(miner_address).or_insert(0) += miner_award;
+            let mut miner_award: u64 = env::var("PER_TX_REWARD").unwrap().parse().unwrap();
+
+            if block.index == 0 {
+                if block.previous_hash
+                    != "0000000000000000000000000000000000000000000000000000000000000000"
+                {
+                    return Err(String::from("Invalid genesis block"));
+                }
+                *new_state.accounts.entry(block.reward.receiver).or_insert(0) +=
+                    block.reward.amount;
+                continue;
+            }
 
             for transaction in block.data.iter() {
                 if !transaction.is_valid(&new_state) {
@@ -157,7 +180,7 @@ impl Blockchain {
                 }
                 let amount = transaction.payload.amount;
                 let fees = transaction.payload.fees;
-                
+
                 if let Some(balance) = new_state.accounts.get_mut(&transaction.payload.payer) {
                     *balance -= amount.checked_add(fees).unwrap();
                 } else {
@@ -167,9 +190,47 @@ impl Blockchain {
                     .accounts
                     .entry(transaction.payload.receiver)
                     .or_insert(0) += amount;
+
+                if let Some(value) = miner_award.checked_add(transaction.payload.fees) {
+                    miner_award = value;
+                } else {
+                    return Err(String::from("Overflow error"));
+                }
             }
+
+            if miner_award != block.reward.amount {
+                return Err(String::from("Block reward is invalid"));
+            }
+            *new_state.accounts.entry(miner_address).or_insert(0) += miner_award;
         }
         Ok(new_state)
+    }
+
+    pub fn save_chain_to_disk(&self, file_path: &str) {
+        let json_data =
+            serde_json::to_string_pretty(&self.chain).expect("Failed to serialize blockchain");
+        fs::write(file_path, json_data).expect("Failed to write blockchain data to dis");
+        println!("Blockchain saved successfully to disk");
+    }
+
+    pub fn load_chain_from_disk(file_path: &str) -> Result<Self, Box<dyn Error>> {
+        if Path::new(file_path).exists() {
+            let json_data = fs::read_to_string(file_path)?;
+            let chain: Vec<Block> = serde_json::from_str(&json_data)?;
+            let balance = Blockchain::rebuild_state(&chain).unwrap();
+            let mempool: VecDeque<TransactionEnvelope> = VecDeque::new();
+            let blockchain = Self {
+                balance: balance,
+                chain: chain,
+                mempool: mempool,
+            };
+
+            if !blockchain.is_valid() {
+                return Err("Loaded blockchain was invalid".into());
+            }
+            return Ok(blockchain);
+        }
+        return Err("Unable to load chain from disk".into());
     }
 }
 
@@ -194,7 +255,9 @@ impl Block {
 
     pub fn is_valid(&self) -> bool {
         let nonce_difficulty = env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap();
-        if self.hash == self.calculate_hash(self.nonce) && hash::is_hash_valid(&self.hash, nonce_difficulty) {
+        if self.hash == self.calculate_hash(self.nonce)
+            && hash::is_hash_valid(&self.hash, nonce_difficulty)
+        {
             return true;
         }
         return false;

@@ -272,8 +272,7 @@ fn main() {
 
 #[test]
 fn rebuild_state_test() {
-    let (mut new_blockchain, genesis_wallet) =
-        block::Blockchain::new(1000).unwrap();
+    let (mut new_blockchain, genesis_wallet) = block::Blockchain::new(1000).unwrap();
 
     let wallet_bob = wallet::Wallet::new();
     let wallet_charlie = wallet::Wallet::new();
@@ -281,52 +280,90 @@ fn rebuild_state_test() {
 
     let miner_xod = miner::Miner::new();
 
-    let tx1 = genesis_wallet.create_transaction(
-        wallet_bob.public_key,
-        200,
-    );
+    let tx1 = genesis_wallet.create_transaction(wallet_bob.public_key, 200);
 
     new_blockchain.submit_transaction(tx1).unwrap();
 
-    let (block1, count1) =
-        miner_xod.mine_block(&mut new_blockchain).unwrap();
+    let (block1, count1) = miner_xod.mine_block(&mut new_blockchain).unwrap();
 
     new_blockchain.add_block(block1, count1).unwrap();
 
-    let tx2 = wallet_bob.create_transaction(
-        wallet_charlie.public_key,
-        50,
-    );
+    let tx2 = wallet_bob.create_transaction(wallet_charlie.public_key, 50);
 
     new_blockchain.submit_transaction(tx2).unwrap();
 
-    let (block2, count2) =
-        miner_xod.mine_block(&mut new_blockchain).unwrap();
+    let (block2, count2) = miner_xod.mine_block(&mut new_blockchain).unwrap();
 
     new_blockchain.add_block(block2, count2).unwrap();
 
-    let tx3 = wallet_charlie.create_transaction(
-        wallet_dave.public_key,
-        20,
-    );
+    let tx3 = wallet_charlie.create_transaction(wallet_dave.public_key, 20);
 
     new_blockchain.submit_transaction(tx3).unwrap();
 
-    let (block3, count3) =
-        miner_xod.mine_block(&mut new_blockchain).unwrap();
+    let (block3, count3) = miner_xod.mine_block(&mut new_blockchain).unwrap();
 
     new_blockchain.add_block(block3, count3).unwrap();
 
     // Rebuild state from chain
-    let rebuilt_state =
-        new_blockchain.rebuild_state().unwrap();
+    let rebuilt_state = Blockchain::rebuild_state(&new_blockchain.chain).unwrap();
 
-    assert_eq!(
-        rebuilt_state.accounts,
-        new_blockchain.balance.accounts
-    );
+    assert_eq!(rebuilt_state.accounts, new_blockchain.balance.accounts);
 
     new_blockchain.chain[1].data[0].payload.amount += 100;
 
-    assert!(new_blockchain.rebuild_state().is_err());
+    assert!(Blockchain::rebuild_state(&new_blockchain.chain).is_err());
+}
+
+#[test]
+pub fn persistence_check() {
+    let (mut new_blockchain, genesis_wallet) = block::Blockchain::new(1000).unwrap();
+
+    let wallet_bob = wallet::Wallet::new();
+    let wallet_charlie = wallet::Wallet::new();
+    let wallet_dave = wallet::Wallet::new();
+
+    let miner_xod = miner::Miner::new();
+
+    let tx1 = genesis_wallet.create_transaction(wallet_bob.public_key, 200);
+
+    new_blockchain.submit_transaction(tx1).unwrap();
+
+    let (block1, count1) = miner_xod.mine_block(&mut new_blockchain).unwrap();
+
+    new_blockchain.add_block(block1, count1).unwrap();
+
+    let tx2 = wallet_bob.create_transaction(wallet_charlie.public_key, 50);
+
+    new_blockchain.submit_transaction(tx2).unwrap();
+
+    let (block2, count2) = miner_xod.mine_block(&mut new_blockchain).unwrap();
+
+    new_blockchain.add_block(block2, count2).unwrap();
+
+    let tx3 = wallet_charlie.create_transaction(wallet_dave.public_key, 20);
+
+    new_blockchain.submit_transaction(tx3).unwrap();
+
+    let (block3, count3) = miner_xod.mine_block(&mut new_blockchain).unwrap();
+
+    new_blockchain.add_block(block3, count3).unwrap();
+
+    new_blockchain.save_chain_to_disk("blockchain_data.json");
+
+    // let balance = Blockchain::rebuild_state(&new_blockchain.chain).unwrap();
+    let loaded_chain = Blockchain::load_chain_from_disk("blockchain_data.json").unwrap();
+
+    assert_eq!(
+        new_blockchain.balance.accounts,
+        loaded_chain.balance.accounts
+    );
+
+    assert_eq!(new_blockchain.chain.len(), loaded_chain.chain.len());
+
+    assert_eq!(
+        new_blockchain.balance.accounts,
+        loaded_chain.balance.accounts
+    );
+
+    assert!(loaded_chain.is_valid());
 }

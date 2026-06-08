@@ -1,9 +1,11 @@
 use borsh::{BorshSerialize, to_vec};
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
 
 use crate::balances::Balance;
 use ed25519_dalek::{VerifyingKey, Signature, Verifier};
 
-#[derive(BorshSerialize, Clone)]
+#[derive(BorshSerialize, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     pub payer: [u8; 32],
     pub receiver: [u8; 32],
@@ -11,13 +13,14 @@ pub struct Transaction {
     pub fees: u64,
 }
 
-#[derive(BorshSerialize, Clone)]
+#[derive(BorshSerialize, Clone, Serialize, Deserialize)]
 pub struct TransactionEnvelope {
     pub payload: Transaction,
+    #[serde(with = "BigArray")]
     pub signature: [u8; 64]
 }
 
-#[derive(BorshSerialize, Clone)]
+#[derive(BorshSerialize, Clone, Serialize, Deserialize)]
 pub struct CoinbaseTransaction {
     pub receiver: [u8; 32],
     pub amount: u64
