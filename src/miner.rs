@@ -32,7 +32,7 @@ impl Miner {
         }
     }
 
-    pub fn mine_block(&self, blockchain: &mut Blockchain) -> (Block, usize) {
+    pub fn mine_block(&self, blockchain: &mut Blockchain) -> Result<(Block, usize), String> {
         let mut state_clone = blockchain.balance.clone();
         let mut valid_count = 0;
         let mut total_count = 0;
@@ -75,27 +75,15 @@ impl Miner {
                 new_block.index = l_block.index + 1;
                 new_block.previous_hash = l_block.hash.clone();
             }
-            None => {}
-        }
-        let final_block = Miner::hash_block(&mut new_block);
-
-        return (final_block.clone(), total_count as usize);
-    }
-
-    pub fn hash_block(block: &mut Block) -> &Block {
-        let mut nonce = 0;
-        loop {
-            let our_hash = block.calculate_hash(nonce);
-            if hash::is_hash_valid(
-                &our_hash,
-                env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap(),
-            ) {
-                block.hash = our_hash;
-                block.nonce = nonce;
-                break;
+            // safety check, although impossible to reach state
+            None => {
+                return Err(String::from("Genesis block was not created"));
             }
-            nonce += 1;
         }
-        block
+        let final_block = hash::hash_block(&mut new_block);
+
+        return Ok((final_block.clone(), total_count as usize));
     }
+
+    
 }

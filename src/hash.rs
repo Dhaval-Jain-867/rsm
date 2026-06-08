@@ -1,6 +1,8 @@
 use sha2::{Sha256, Digest};
+use std::env;
 
 use crate::transaction::{CoinbaseTransaction, TransactionEnvelope};
+use crate::block::Block;
 
 pub fn generate_hash(coinbase: &CoinbaseTransaction, data: &Vec<TransactionEnvelope>, timestamp: i64, index: u128, previous_hash: Option<&str>, nonce: u128) -> String {
     let last_hash = previous_hash.unwrap_or("0000000000000000000000000000000000000000000000000000000000000000");
@@ -30,4 +32,21 @@ pub fn is_hash_valid(hash: &str, difficulty: u8) -> bool {
         return true;
     }
     return false;
+}
+
+pub fn hash_block(block: &mut Block) -> &Block {
+    let mut nonce = 0;
+    loop {
+        let our_hash = block.calculate_hash(nonce);
+        if is_hash_valid(
+            &our_hash,
+            env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap(),
+        ) {
+            block.hash = our_hash;
+            block.nonce = nonce;
+            break;
+        }
+        nonce += 1;
+    }
+    block
 }

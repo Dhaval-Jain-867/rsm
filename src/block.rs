@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
-
+use chrono::Utc;
 use std::env;
 
 use crate::balances::Balance;
 use crate::hash;
 use crate::transaction::{CoinbaseTransaction, TransactionEnvelope};
+use crate::wallet::Wallet;
 
 #[derive(Clone)]
 pub struct Block {
@@ -24,20 +25,27 @@ pub struct Blockchain {
 }
 
 impl Blockchain {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(initial_amount: u64) -> Result<(Self, Wallet), String> {
+        let mut bchain = Blockchain {
             balance: Balance::new(),
             chain: Vec::new(),
             mempool: VecDeque::new(),
+        };
+        let gwallet = bchain.create_genesis_block(initial_amount);
+        if let Ok(wallet) = gwallet {
+            return Ok((bchain, wallet));
+        } else {
+            return Err(String::from("Error creating wallet for genesis block"));
         }
     }
 
-    pub fn add_block(&mut self, mut block: Block, total_count: usize) -> Result<String, String> {
+    pub fn add_block(&mut self, block: Block, total_count: usize) -> Result<String, String> {
+        // safety check but pratically impossible
+        if self.chain.is_empty() {
+            return Err(String::from("Genesis block should be minted before adding any other block"));
+        }
         let mut state_clone = self.balance.clone();
 
-        // if block.reward.amount  != env::var("PER_TX_REWARD").unwrap().parse().unwrap() {
-        //     return Err(String::from("Reward amount is incorrect"));
-        // }
         let mut predicted_reward: u64 = env::var("PER_TX_REWARD").unwrap().parse().unwrap();
 
         for transaction in &block.data {
@@ -47,9 +55,7 @@ impl Blockchain {
                 ));
             }
             state_clone.transfer(&transaction.payload);
-            predicted_reward = predicted_reward
-                .checked_add(transaction.payload.fees)
-                .unwrap();
+            predicted_reward = predicted_reward.checked_add(transaction.payload.fees).unwrap();
         }
 
         if block.is_valid() && block.reward.amount == predicted_reward {
@@ -68,8 +74,40 @@ impl Blockchain {
         ));
     }
 
+    pub fn create_genesis_block(&mut self, initial_amount: u64) -> Result<Wallet, String> {
+        if !self.chain.is_empty() {
+            return Err(String::from("Genesis block has already been minted"));
+        }
+        let genesis_wallet = Wallet::new();
+        let coinbase_transaction = CoinbaseTransaction {
+            receiver: genesis_wallet.public_key,
+            amount: initial_amount,
+        };
+        let timestamp = Utc::now().timestamp();
+        let block_data  = Vec::new();
+        let mut new_block = Block::new(
+            0,
+            timestamp,
+            coinbase_transaction,
+            block_data,
+            String::from("0000000000000000000000000000000000000000000000000000000000000000"),
+        );
+        let final_block = hash::hash_block(&mut new_block);
+
+        // self.add_block(*final_block, 0);
+        if final_block.is_valid() {
+            *self.balance.accounts.entry(final_block.reward.receiver).or_insert(0) += final_block.reward.amount;
+            self.chain.push(final_block.clone());
+            return Ok(genesis_wallet);
+        }
+        return Err(String::from("An error occurred while creating the genesis block"));
+    }
+
     pub fn is_valid(&self) -> bool {
         let chain_length = self.chain.len();
+        if chain_length == 0 || self.chain[0].index != 0{
+            return false;
+        }
         for i in 0..chain_length {
             let curr_block = &self.chain[i];
             if i != 0 {
@@ -155,7 +193,8 @@ impl Block {
     }
 
     pub fn is_valid(&self) -> bool {
-        if self.hash == self.calculate_hash(self.nonce) && hash::is_hash_valid(&self.hash, 3) {
+        let nonce_difficulty = env::var("NONCE_DIFFICULTY").unwrap().parse().unwrap();
+        if self.hash == self.calculate_hash(self.nonce) && hash::is_hash_valid(&self.hash, nonce_difficulty) {
             return true;
         }
         return false;
