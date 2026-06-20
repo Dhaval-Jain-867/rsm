@@ -7,6 +7,7 @@ use hex;
 
 use crate::{transaction::{Transaction, TransactionEnvelope}};
 
+#[derive(Clone)]
 pub struct Wallet {
     pub public_key: [u8; 32],
     private_key: [u8; 32],

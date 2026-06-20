@@ -1,16 +1,18 @@
 #![allow(warnings)]
 
 use crate::block::Blockchain;
+use crate::miner::Miner;
 use crate::node::Node;
+use crate::wallet::Wallet;
 
 mod balances;
 mod block;
 mod hash;
+mod message;
 mod miner;
+mod node;
 mod transaction;
 mod wallet;
-mod message;
-mod node;
 
 fn main() {
     println!("My own blockchain has started");
@@ -18,14 +20,29 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     let port = &args[1];
+    let seed;
+    let mut blockchain;
 
-    let seed = if args.len() > 2 {
-        Some(args[2].clone())
+    if args.len() > 2 {
+        seed = Some(args[2].clone());
+        blockchain = Blockchain::new(1000).unwrap().0;
     } else {
-        None
-    };
+        seed = None;
+        let genesis_wallet;
+        (blockchain, genesis_wallet) = Blockchain::new(1000).unwrap();
+        let wallet_bob = Wallet::new();
+        let miner = Miner::new();
 
-    let blockchain = Blockchain::new(1000).unwrap().0;
+        let tx = genesis_wallet.create_transaction(wallet_bob.public_key, 100);
+
+        blockchain.submit_transaction(tx).unwrap();
+        let (block, count) = miner.mine_block(&mut blockchain).unwrap();
+
+        blockchain.add_block(block, count).unwrap();
+
+        println!("Chain height before node start: {}", blockchain.chain.len());
+    }
+
     let node = Node::new(format!("127.0.0.1:{}", port), blockchain);
 
     node.start(seed);

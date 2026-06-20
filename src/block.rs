@@ -117,14 +117,20 @@ impl Blockchain {
     }
 
     pub fn is_valid(&self) -> bool {
-        let chain_length = self.chain.len();
-        if chain_length == 0 || self.chain[0].index != 0 {
+        Blockchain::validate_chain(&self.chain)
+    }
+
+    pub fn validate_chain(chain: &Vec<Block>) -> bool {
+        let chain_length = chain.len();
+
+        if chain_length == 0 || chain[0].index != 0 {
             return false;
         }
+
         for i in 0..chain_length {
-            let curr_block = &self.chain[i];
+            let curr_block = &chain[i];
             if i != 0 {
-                if curr_block.previous_hash == (&self.chain[i - 1]).hash && curr_block.is_valid() {
+                if curr_block.previous_hash == chain[i-1].hash && curr_block.is_valid() {
                     continue;
                 } else {
                     return false;
@@ -137,6 +143,7 @@ impl Blockchain {
                 }
             }
         }
+
         return true;
     }
 

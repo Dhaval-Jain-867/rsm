@@ -31,12 +31,13 @@ impl Node {
             self.peers.lock().unwrap().push(seed_address.clone());
             self.do_handshake(&seed_address);
             self.broadcast(P2pMessage::RequestPeers(self.address.clone()));
+            self.broadcast(P2pMessage::RequestChain(self.address.clone()));
         } else {
             println!("Starting as the genesis node. Waiting for peers...");
         }
     }
 
-    fn start_server(&self) {
+    fn start_server(& self) {
         let server_node = self.clone();
 
         thread::spawn(move || {
@@ -45,7 +46,7 @@ impl Node {
 
             for stream in listener.incoming() {
                 if let Ok(tcp_stream) = stream {
-                    let handler_node = server_node.clone();
+                    let mut handler_node = server_node.clone();
                     thread::spawn(move || {
                         handler_node.handle_connection(tcp_stream);
                     });
@@ -54,11 +55,10 @@ impl Node {
         });
     }
 
-    fn handle_connection(&self, mut stream: TcpStream) {
+    fn handle_connection(&mut self, mut stream: TcpStream) {
         println!("Received incoming connection");
 
         let mut buffer = String::new();
-        println!("Waiting for data");
         if stream.read_to_string(&mut buffer).is_ok() {
             if let Ok(message) = serde_json::from_str::<P2pMessage>(&buffer) {
                 println!("Handling message");
@@ -67,7 +67,7 @@ impl Node {
         }
     }
 
-    fn handle_message(&self, message: P2pMessage) {
+    fn handle_message(&mut self, message: P2pMessage) {
         println!("\n");
         match message {
             P2pMessage::Handshake(address) => {
@@ -128,7 +128,48 @@ impl Node {
             }
 
             P2pMessage::RequestChain(peer_address) => {
-                println!()
+                println!("Peer: {} requesting chain", peer_address);
+
+                let chain = self.blockchain.lock().unwrap().chain.clone();
+                let message = P2pMessage::ChainResponse(chain);
+                let json = serde_json::to_string(&message).unwrap();
+
+                match TcpStream::connect(&peer_address) {
+                    Ok(mut stream) => {
+                        stream.write_all(json.as_bytes()).unwrap();
+                        println!("Chain sent to peer: {}", peer_address);
+                    }
+                    Err(_e) => {
+                        println!("Error connecting to peer: {}", peer_address);
+                        println!("Unable to send chain");
+                    }
+                }
+            }
+
+            P2pMessage::ChainResponse(chain_received) => {
+                println!("Recieved a chain");
+
+                if Blockchain::validate_chain(&chain_received) {
+                    if chain_received.len() > self.height() {
+                        let balance = Blockchain::rebuild_state(&chain_received);
+                        match balance {
+                            Ok(balance) => {
+                                let mut blockchain = self.blockchain.lock().unwrap();
+                                blockchain.chain = chain_received;
+                                blockchain.balance = balance;
+                                println!("Chain updated successfully");
+                                println!("Current chain length : {}", blockchain.chain.len());
+                            }
+                            Err(e) => {
+                                println!("Error rebuilding state from chain: {}", e);
+                            } 
+                        }
+                    } else {
+                        println!("Length of received chain is shorter than or equal to the current version");
+                    }
+                } else {
+                    println!("Invalid chain received");
+                }
             }
 
             P2pMessage::NewTransaction(tx) => {
@@ -144,7 +185,7 @@ impl Node {
 
     pub fn broadcast(&self, message: P2pMessage) {
         let message_json = serde_json::to_string(&message).expect("Serializtion failed");
-        let peers = self.peers.lock().unwrap();
+        let peers = self.peers.lock().unwrap().clone(); // cloning so that a slow network connection does not block every other thread that wants to access peers
 
         for peer in peers.iter() {
             if let Ok(mut stream) = TcpStream::connect(peer) {
