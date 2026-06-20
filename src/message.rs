@@ -8,8 +8,11 @@ pub enum P2pMessage {
     Handshake (String),
     NewTransaction(TransactionEnvelope),
     NewBlock(Block),
-    RequestChain,
 
+    RequestChain(String),
+    ChainResponse(Vec<Block>),
+
+    NewPeer(String),
     RequestPeers(String),
     PeerList(Vec<String>),
 }

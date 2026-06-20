@@ -1,10 +1,10 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::thread;
 use std::sync::{Arc, Mutex};
+use std::thread;
 
-use crate::message::P2pMessage;
 use crate::block::Blockchain;
+use crate::message::P2pMessage;
 
 #[derive(Clone)]
 pub struct Node {
@@ -58,10 +58,10 @@ impl Node {
         println!("Received incoming connection");
 
         let mut buffer = String::new();
-
+        println!("Waiting for data");
         if stream.read_to_string(&mut buffer).is_ok() {
             if let Ok(message) = serde_json::from_str::<P2pMessage>(&buffer) {
-                println!("Received message");
+                println!("Handling message");
                 self.handle_message(message);
             }
         }
@@ -72,14 +72,26 @@ impl Node {
         match message {
             P2pMessage::Handshake(address) => {
                 println!("Handshake receives from {}", address);
-
-                let mut peers = self.peers.lock().unwrap();
-
-                if !peers.contains(&address) {
-                    peers.push(address.clone());
+                {
+                    let mut peers = self.peers.lock().unwrap();
+                    if !peers.contains(&address) {
+                        peers.push(address.clone());
+                    }
+                    println!("Current peers: {:?}", *peers);
                 }
 
-                println!("Current peers: {:?}", *peers);
+                println!("Informing all the peers about new peer: {}", address);
+                let message = P2pMessage::NewPeer(address.clone());
+                self.broadcast(message);
+            }
+
+            P2pMessage::NewPeer(new_peer) => {
+                let mut my_peers = self.peers.lock().unwrap();
+                if new_peer != self.address && !my_peers.contains(&new_peer) {
+                    my_peers.push(new_peer);
+                }
+                println!("Peer list updated successfully for the new peer");
+                println!("Peer list: {:?}", *my_peers);
             }
 
             P2pMessage::RequestPeers(peer_address) => {
@@ -104,7 +116,7 @@ impl Node {
             P2pMessage::PeerList(peer_list) => {
                 println!("Received a peer list");
                 let mut my_peers = self.peers.lock().unwrap();
-                
+
                 println!("Updating my peer list");
                 for peer in peer_list {
                     if peer != self.address && !my_peers.contains(&peer) {
@@ -115,8 +127,8 @@ impl Node {
                 println!("Current peers: {:?}", *my_peers);
             }
 
-            P2pMessage::RequestChain => {
-                println!("Peer requested blockchain");
+            P2pMessage::RequestChain(peer_address) => {
+                println!()
             }
 
             P2pMessage::NewTransaction(tx) => {
@@ -136,7 +148,7 @@ impl Node {
 
         for peer in peers.iter() {
             if let Ok(mut stream) = TcpStream::connect(peer) {
-                let _ = stream.write_all(message_json.as_bytes());
+                let _ = stream.write_all(message_json.as_bytes()).unwrap();
             } else {
                 println!("Failed to connect to peer : {}", peer);
             }
@@ -150,11 +162,16 @@ impl Node {
         match TcpStream::connect(peer) {
             Ok(mut stream) => {
                 stream.write_all(json.as_bytes()).unwrap();
-                println!("Message sent to {}", peer);
+                println!("Handshake sent to {}", peer);
             }
             Err(e) => {
-                println!("Failed to connect: {}", e);
+                println!("Failed to do handshake: {}", e);
             }
         }
+    }
+
+    pub fn height(&self) -> usize {
+        let b_chain = self.blockchain.lock().unwrap();
+        b_chain.chain.len()
     }
 }
