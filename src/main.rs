@@ -1,4 +1,7 @@
+#![allow(warnings)]
+
 use crate::block::Blockchain;
+use crate::node::Node;
 
 mod balances;
 mod block;
@@ -6,9 +9,28 @@ mod hash;
 mod miner;
 mod transaction;
 mod wallet;
+mod message;
+mod node;
 
 fn main() {
-    println!("Hello, world!");
+    println!("My own blockchain has started");
+
+    let args: Vec<String> = std::env::args().collect();
+
+    let port = &args[1];
+
+    let seed = if args.len() > 2 {
+        Some(args[2].clone())
+    } else {
+        None
+    };
+
+    let blockchain = Blockchain::new(1000).unwrap().0;
+    let node = Node::new(format!("127.0.0.1:{}", port), blockchain);
+
+    node.start(seed);
+
+    loop {}
 }
 
 // #[test]
