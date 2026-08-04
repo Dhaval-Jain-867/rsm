@@ -28,6 +28,14 @@ pub struct Blockchain {
 }
 
 impl Blockchain {
+    pub fn empty() -> Self {
+        Self {
+            balance: Balance::new(),
+            chain: Vec::new(),
+            mempool: VecDeque::new()
+        }
+    }
+    
     pub fn new(initial_amount: u64) -> Result<(Self, Wallet), String> {
         let mut bchain = Blockchain {
             balance: Balance::new(),

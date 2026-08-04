@@ -1,14 +1,16 @@
-use std::io::{Read, Write};
+use std::collections::VecDeque;
+use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::{println, thread};
 
+use crate::Balance;
 use crate::block::{Block, Blockchain};
 use crate::message::P2pMessage;
 use crate::miner::Miner;
 use crate::transaction::TransactionEnvelope;
 
-use tracing::{info, warn, error, info_span, instrument};
+use tracing::{error, info, info_span, instrument, warn};
 
 #[derive(Clone)]
 pub struct Node {
@@ -19,7 +21,62 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(address: String, blockchain: Blockchain) -> Self {
+    pub fn start_cli(&mut self) {
+        loop {
+            print!("node>");
+            io::stdout().flush().unwrap();
+
+            let mut input = String::new();
+            io::stdin()
+                .read_line(&mut input)
+                .expect("Failed to read line");
+
+            let input = input.trim();
+            if input.is_empty() {
+                continue;
+            }
+
+            let mut parts = input.split_whitespace();
+            let command = parts.next().unwrap();
+
+            match command {
+                "info" => {
+                    let chain = self.blockchain.lock().unwrap();
+                    println!("Blockchain length: {}", chain.chain.len());
+                    println!("Pending transactios in mempool: {}", chain.mempool.len());
+                }
+                "peers" => {
+                    let peers = self.peers.lock().unwrap();
+                    println!("Connected to {} peers : {:?}", peers.len(), *peers);
+                }
+                "help" => {
+                    println!("Available commands -");
+                    println!("info - Show blockchain status");
+                    println!("peers - List connected peers");
+                    println!("exit - Shut down the node");
+                }
+                "exit" => {
+                    println!("Shutting down the node");
+                    break;
+                }
+                _ => {
+                    println!("Unknown command: {}", command);
+                }
+            }
+        }
+    }
+
+    pub fn bootstrap(address: String, seed_node: Option<String>) -> Self {
+        let node: Node = Node::new(address, seed_node.clone());
+        node.start(seed_node);
+        return node;
+    }
+
+    pub fn new(address: String, seed_node: Option<String>) -> Self {
+        let blockchain = match seed_node {
+            Some(_) => Blockchain::empty(),
+            None => Blockchain::new(1000).unwrap().0,
+        };
         Self {
             address,
             blockchain: Arc::new(Mutex::new(blockchain)),
@@ -73,7 +130,10 @@ impl Node {
     }
 
     fn handle_connection(&mut self, mut stream: TcpStream) {
-        let peer_ip = stream.peer_addr().map(|a| a.to_string()).unwrap_or_else(|_| "Unknown".to_string());
+        let peer_ip = stream
+            .peer_addr()
+            .map(|a| a.to_string())
+            .unwrap_or_else(|_| "Unknown".to_string());
         let _conn_span = info_span!("tcp_rx", ip=%peer_ip).entered();
 
         let mut buffer = String::new();
@@ -132,7 +192,10 @@ impl Node {
             }
 
             P2pMessage::PeerList(peer_list) => {
-                info!(received_count = peer_list.len(), "Received peer list from network");
+                info!(
+                    received_count = peer_list.len(),
+                    "Received peer list from network"
+                );
                 let mut my_peers = self.peers.lock().unwrap();
 
                 for peer in peer_list {
@@ -161,7 +224,10 @@ impl Node {
 
             P2pMessage::ChainResponse(chain_received) => {
                 let _span = info_span!("sync").entered();
-                info!(received_height = chain_received.len(), "Received chain state");
+                info!(
+                    received_height = chain_received.len(),
+                    "Received chain state"
+                );
 
                 if Blockchain::validate_chain(&chain_received) {
                     if chain_received.len() > self.height() {
@@ -171,10 +237,13 @@ impl Node {
                                 let mut blockchain = self.blockchain.lock().unwrap();
                                 blockchain.chain = chain_received;
                                 blockchain.balance = balance;
-                                info!(new_height = blockchain.chain.len(), "Chain updated successfully");
+                                info!(
+                                    new_height = blockchain.chain.len(),
+                                    "Chain updated successfully"
+                                );
                             }
                             Err(e) => {
-                               error!("Failed to rebuild state from valid chain: {}", e)
+                                error!("Failed to rebuild state from valid chain: {}", e)
                             }
                         }
                     } else {
@@ -220,7 +289,10 @@ impl Node {
 
                 match mem_add {
                     Ok(_) => {
-                        info!(mempool_size = my_chain.mempool.len(), "Relayed transaction added to mempool");
+                        info!(
+                            mempool_size = my_chain.mempool.len(),
+                            "Relayed transaction added to mempool"
+                        );
                     }
                     Err(e) => {
                         warn!("Relayed transaction rejected: {}", e);

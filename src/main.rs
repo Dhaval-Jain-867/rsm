@@ -2,9 +2,9 @@
 use std::collections::VecDeque;
 use std::{fs, println, thread};
 use std::time::Duration;
-use std::io::{self, Write};
 
 use crate::block::Blockchain;
+use crate::helper::{init_tracing, print_banner};
 use crate::miner::Miner;
 use crate::node::Node;
 use crate::wallet::Wallet;
@@ -20,6 +20,7 @@ mod miner;
 mod node;
 mod transaction;
 mod wallet;
+mod helper;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -29,88 +30,21 @@ fn main() {
         std::process::exit(1);
     }
 
+    
     let port = &args[1];
-
-    fs::create_dir_all("logs").expect("Failed to create logs directory");
-    let file_appender = tracing_appender::rolling::never("logs", format!("node_{}.log", port));
-
-    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(file_appender);
-
-    tracing_subscriber::fmt()
-        .with_writer(non_blocking_writer)
-        .with_target(false)
-        .with_ansi(false)
-        .init();
-
-    println!("🚀 Node started on port {}", port);
-    println!("📂 Background events are writing via tracing to 'logs/node_{}.log'", port);
-    println!("Type 'help' for commands");
+    init_tracing(&port);
+    print_banner(&port);
 
     let seed;
-    let mut blockchain;
-    let mut genesis_wallet = None;
 
     if args.len() > 2 {
         seed = Some(args[2].clone());
-        blockchain = Blockchain { // placeholder, never used
-            balance: Balance::new(),
-            chain: Vec::new(),
-            mempool: VecDeque::new(),
-        };
     } else {
         seed = None;
-        let wallet;
-        (blockchain, wallet) = Blockchain::new(1000).unwrap();
-        genesis_wallet = Some(wallet);
-
-        println!("Genesis chain height: {}", blockchain.chain.len());
     }
 
-    let mut node = Node::new(format!("127.0.0.1:{}", port), blockchain);
-
-    node.start(seed);
-    thread::sleep(Duration::from_secs(5));
-
-    loop {
-        print!("node>");
-        io::stdout().flush().unwrap();
-
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
-
-        let input = input.trim();
-        if input.is_empty() {
-            continue;
-        }
-
-        let mut parts = input.split_whitespace();
-        let command = parts.next().unwrap();
-
-        match command {
-            "info" => {
-                let chain = node.blockchain.lock().unwrap();
-                println!("Blockchain length: {}", chain.chain.len());
-                println!("Pending transactios in mempool: {}", chain.mempool.len());
-            },
-            "peers" => {
-                let peers = node.peers.lock().unwrap();
-                println!("Connected to {} peers : {:?}", peers.len(), *peers);
-            },
-            "help" => {
-                println!("Available commands -");
-                println!("info - Show blockchain status");
-                println!("peers - List connected peers");
-                println!("exit - Shut down the node");
-            },
-            "exit" => {
-                println!("Shutting down the node");
-                break;
-            },
-            _ => {
-                println!("Unknown command: {}", command);
-            }
-        }
-    }
+    let mut node = Node::bootstrap(format!("127.0.0.1:{}", port), seed);
+    node.start_cli();
 }
 
 // #[test]
