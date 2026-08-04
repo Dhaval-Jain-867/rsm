@@ -34,7 +34,7 @@ pub fn is_hash_valid(hash: &str, difficulty: u8) -> bool {
     return false;
 }
 
-pub fn hash_block(block: &mut Block) -> &Block {
+pub fn hash_block(block: &mut Block) {
     let mut nonce = 0;
     loop {
         let our_hash = block.calculate_hash(nonce);
@@ -48,5 +48,4 @@ pub fn hash_block(block: &mut Block) -> &Block {
         }
         nonce += 1;
     }
-    block
 }

@@ -1,11 +1,12 @@
 use std::env;
+use sha2::{Sha256, Digest};
 
 use borsh;
 use ed25519_dalek::{Signer, SigningKey};
 use getrandom;
 use hex;
 
-use crate::{transaction::{Transaction, TransactionEnvelope}};
+use crate::transaction::{Transaction, TransactionEnvelope};
 
 #[derive(Clone)]
 pub struct Wallet {
@@ -31,15 +32,23 @@ impl Wallet {
         hex::encode(self.public_key)
     }
 
-    pub fn sign_transaction(&self, payload: Transaction) -> TransactionEnvelope {
+    pub fn sign_and_hash_transaction(&self, payload: Transaction) -> TransactionEnvelope {
         let payload_bytes = borsh::to_vec(&payload).expect("Failed to serialize payload");
+
+        // signing the transaction
         let signing_key = SigningKey::from_bytes(&self.private_key);
         let signature_object = signing_key.sign(&payload_bytes);
         let signature_bytes = signature_object.to_bytes();
 
+        // hashing the transaction
+        let mut hasher = Sha256::new();
+        hasher.update(&payload_bytes);
+        let tx_id = hex::encode(hasher.finalize());
+
         TransactionEnvelope {
+            id: tx_id,
             payload: payload,
-            signature: signature_bytes
+            signature: signature_bytes,
         }
     }
 
@@ -48,10 +57,10 @@ impl Wallet {
             payer: self.public_key,
             receiver: to,
             amount: amount,
-            fees: (amount * env::var("FEES_PERCENT").unwrap().parse::<u64>().unwrap()) / 100
+            fees: (amount * env::var("FEES_PERCENT").unwrap().parse::<u64>().unwrap()) / 100,
         };
 
-        let transaction = self.sign_transaction(payload);
+        let transaction = self.sign_and_hash_transaction(payload);
         return transaction;
     }
 }

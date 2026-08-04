@@ -1,16 +1,19 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{println, thread};
 
-use crate::block::Blockchain;
+use crate::block::{Block, Blockchain};
 use crate::message::P2pMessage;
+use crate::miner::Miner;
+use crate::transaction::TransactionEnvelope;
 
 #[derive(Clone)]
 pub struct Node {
     pub address: String,
     pub blockchain: Arc<Mutex<Blockchain>>,
     pub peers: Arc<Mutex<Vec<String>>>,
+    pub miner_wallet: Miner,
 }
 
 impl Node {
@@ -19,6 +22,7 @@ impl Node {
             address,
             blockchain: Arc::new(Mutex::new(blockchain)),
             peers: Arc::new(Mutex::new(Vec::new())),
+            miner_wallet: Miner::new(),
         }
     }
 
@@ -37,7 +41,7 @@ impl Node {
         }
     }
 
-    fn start_server(& self) {
+    fn start_server(&self) {
         let server_node = self.clone();
 
         thread::spawn(move || {
@@ -53,6 +57,18 @@ impl Node {
                 }
             }
         });
+    }
+
+    pub fn mine_new_block(&mut self) {
+        let block;
+        {
+            let mut my_chain = self.blockchain.lock().unwrap();
+
+            block = self.miner_wallet.mine_block(&mut my_chain).unwrap();
+        }
+
+        println!("Minted a new block");
+        self.handle_message(P2pMessage::NewBlock(block));
     }
 
     fn handle_connection(&mut self, mut stream: TcpStream) {
@@ -82,7 +98,7 @@ impl Node {
 
                 println!("Informing all the peers about new peer: {}", address);
                 let message = P2pMessage::NewPeer(address.clone());
-                self.broadcast(message);
+                self.broadcast_except(message, address);
             }
 
             P2pMessage::NewPeer(new_peer) => {
@@ -162,22 +178,105 @@ impl Node {
                             }
                             Err(e) => {
                                 println!("Error rebuilding state from chain: {}", e);
-                            } 
+                            }
                         }
                     } else {
-                        println!("Length of received chain is shorter than or equal to the current version");
+                        println!(
+                            "Length of received chain is shorter than or equal to the current version"
+                        );
                     }
                 } else {
                     println!("Invalid chain received");
                 }
             }
 
-            P2pMessage::NewTransaction(tx) => {
-                println!("Received new transaction");
+            P2pMessage::SubmitTransaction(tx) => {
+                println!("Received new transaction from wallet");
+
+                {
+                    let mut my_chain = self.blockchain.lock().unwrap();
+                    let mem_add = my_chain.submit_transaction(tx.clone());
+
+                    match mem_add {
+                        Ok(_) => {
+                            println!("Transaction added to mempool successfully");
+                        }
+                        Err(e) => {
+                            println!("Couldn't enter transaction to mempool: {}", e);
+                            return;
+                        }
+                    }
+                    println!(
+                        "mempool updated successfully. mempool length: {}",
+                        my_chain.mempool.len()
+                    );
+                }
+
+                println!("Informing all the peers about new transaction");
+                let message = P2pMessage::PropagateTransaction(tx);
+                self.broadcast(message);
+            }
+
+            P2pMessage::PropagateTransaction(tx) => {
+                println!("Received new transaction from peer node");
+
+                let mut my_chain = self.blockchain.lock().unwrap();
+                let mem_add = my_chain.submit_transaction(tx);
+
+                match mem_add {
+                    Ok(_) => {
+                        println!("Transaction added to mempool successfully");
+                    }
+                    Err(e) => {
+                        println!("Couldn't enter transaction to mempool: {}", e);
+                        return;
+                    }
+                }
+
+                println!(
+                    "mempool updated successfully. mempool length: {}",
+                    my_chain.mempool.len()
+                );
             }
 
             P2pMessage::NewBlock(block) => {
-                println!("Received new block");
+                println!("Received block, index: {} from miner", block.index);
+
+                // block will be validated and added to the chain
+                {
+                    let mut my_chain = self.blockchain.lock().unwrap();
+                    let block_added = my_chain.add_block(block.clone());
+                    match block_added {
+                        Ok(_) => {
+                            println!("Block added to chain successfully");
+                        }
+                        Err(e) => {
+                            println!("Couldn't enter block to the chain: {}", e);
+                            return;
+                        }
+                    }
+                }
+
+                println!("Informing all the peers about new block");
+                let message = P2pMessage::PropagateBlock(block);
+                self.broadcast(message);
+            }
+
+            P2pMessage::PropagateBlock(block) => {
+                println!("Received block, index: {} from peer node", block.index);
+
+                let mut my_chain = self.blockchain.lock().unwrap();
+                let block_added = my_chain.add_block(block.clone());
+
+                match block_added {
+                    Ok(_) => {
+                        println!("Block added to chain successfully");
+                    }
+                    Err(e) => {
+                        println!("Couldn't enter block to the chain: {}", e);
+                        return;
+                    }
+                }
             }
         }
         println!("\n");
@@ -192,6 +291,21 @@ impl Node {
                 let _ = stream.write_all(message_json.as_bytes()).unwrap();
             } else {
                 println!("Failed to connect to peer : {}", peer);
+            }
+        }
+    }
+
+    pub fn broadcast_except(&self, message: P2pMessage, address: String) {
+        let message_json = serde_json::to_string(&message).expect("Serializtion failed");
+        let peers = self.peers.lock().unwrap().clone();
+
+        for peer in peers.iter() {
+            if (*peer != address) {
+                if let Ok(mut stream) = TcpStream::connect(peer) {
+                    let _ = stream.write_all(message_json.as_bytes()).unwrap();
+                } else {
+                    println!("Failed to connect to peer : {}", peer);
+                }
             }
         }
     }
@@ -214,5 +328,14 @@ impl Node {
     pub fn height(&self) -> usize {
         let b_chain = self.blockchain.lock().unwrap();
         b_chain.chain.len()
+    }
+
+    // Helpers
+    pub fn submit_transaction(&mut self, tx: TransactionEnvelope) {
+        self.handle_message(P2pMessage::SubmitTransaction(tx));
+    }
+
+    pub fn submit_block(&mut self, block: Block) {
+        self.handle_message(P2pMessage::NewBlock(block));
     }
 }

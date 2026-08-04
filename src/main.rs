@@ -1,9 +1,13 @@
 #![allow(warnings)]
+use std::collections::VecDeque;
+use std::thread;
+use std::time::Duration;
 
 use crate::block::Blockchain;
 use crate::miner::Miner;
 use crate::node::Node;
 use crate::wallet::Wallet;
+use crate::balances::Balance;
 
 mod balances;
 mod block;
@@ -20,32 +24,54 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     let port = &args[1];
+
     let seed;
     let mut blockchain;
+    let mut genesis_wallet = None;
 
     if args.len() > 2 {
         seed = Some(args[2].clone());
-        blockchain = Blockchain::new(1000).unwrap().0;
+        blockchain = Blockchain { // placeholder, never used
+            balance: Balance::new(),
+            chain: Vec::new(),
+            mempool: VecDeque::new(),
+        };
     } else {
         seed = None;
-        let genesis_wallet;
-        (blockchain, genesis_wallet) = Blockchain::new(1000).unwrap();
-        let wallet_bob = Wallet::new();
-        let miner = Miner::new();
 
-        let tx = genesis_wallet.create_transaction(wallet_bob.public_key, 100);
+        let wallet;
 
-        blockchain.submit_transaction(tx).unwrap();
-        let (block, count) = miner.mine_block(&mut blockchain).unwrap();
+        (blockchain, wallet) = Blockchain::new(1000).unwrap();
 
-        blockchain.add_block(block, count).unwrap();
+        genesis_wallet = Some(wallet);
 
-        println!("Chain height before node start: {}", blockchain.chain.len());
+        println!("Genesis chain height: {}", blockchain.chain.len());
     }
 
-    let node = Node::new(format!("127.0.0.1:{}", port), blockchain);
+    let mut node = Node::new(format!("127.0.0.1:{}", port), blockchain);
 
     node.start(seed);
+
+    // Genesis node performs the test
+    if args.len() == 2 {
+        thread::sleep(Duration::from_secs(10));
+
+        let receiver = Wallet::new();
+
+        let tx = genesis_wallet
+            .unwrap()
+            .create_transaction(receiver.public_key, 100);
+
+        println!("\nSubmitting transaction...\n");
+
+        node.submit_transaction(tx);
+
+        thread::sleep(Duration::from_secs(5));
+
+        println!("\nMining block...\n");
+
+        node.mine_new_block();
+    }
 
     loop {}
 }

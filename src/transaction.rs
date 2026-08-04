@@ -15,6 +15,7 @@ pub struct Transaction {
 
 #[derive(BorshSerialize, Clone, Serialize, Deserialize)]
 pub struct TransactionEnvelope {
+    pub id: String,
     pub payload: Transaction,
     #[serde(with = "BigArray")]
     pub signature: [u8; 64]

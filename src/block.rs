@@ -1,6 +1,6 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::path::Path;
 use std::{env, fs};
@@ -42,16 +42,22 @@ impl Blockchain {
         }
     }
 
-    pub fn add_block(&mut self, block: Block, total_count: usize) -> Result<String, String> {
+    pub fn add_block(&mut self, block: Block) -> Result<String, String> {
         // safety check but pratically impossible
         if self.chain.is_empty() {
             return Err(String::from(
                 "Genesis block should be minted before adding any other block",
             ));
         }
-        let mut state_clone = self.balance.clone();
 
+        let last_block = self.chain.last().unwrap();
+        if block.previous_hash != last_block.hash {
+            return Err(String::from("Block does not extend current chain"));
+        }
+
+        let mut state_clone = self.balance.clone();
         let mut predicted_reward: u64 = env::var("PER_TX_REWARD").unwrap().parse().unwrap();
+        let mut mined_ids: HashSet<String> = HashSet::new();
 
         for transaction in &block.data {
             if !transaction.is_valid(&state_clone) {
@@ -59,6 +65,7 @@ impl Blockchain {
                     "An invalid transaction was present in the block",
                 ));
             }
+            mined_ids.insert(transaction.id.clone());
             state_clone.transfer(&transaction.payload);
             predicted_reward = predicted_reward
                 .checked_add(transaction.payload.fees)
@@ -70,9 +77,11 @@ impl Blockchain {
                 .accounts
                 .entry(block.reward.receiver)
                 .or_insert(0) += block.reward.amount;
+
             self.chain.push(block);
             self.balance = state_clone;
-            self.mempool.drain(0..total_count);
+            self.mempool.retain(|tx| !mined_ids.contains(&tx.id));
+
             return Ok(String::from("Block successfully mined"));
         }
 
@@ -99,16 +108,16 @@ impl Blockchain {
             block_data,
             String::from("0000000000000000000000000000000000000000000000000000000000000000"),
         );
-        let final_block = hash::hash_block(&mut new_block);
+        hash::hash_block(&mut new_block);
 
         // self.add_block(*final_block, 0);
-        if final_block.is_valid() {
+        if new_block.is_valid() {
             *self
                 .balance
                 .accounts
-                .entry(final_block.reward.receiver)
-                .or_insert(0) += final_block.reward.amount;
-            self.chain.push(final_block.clone());
+                .entry(new_block.reward.receiver)
+                .or_insert(0) += new_block.reward.amount;
+            self.chain.push(new_block);
             return Ok(genesis_wallet);
         }
         return Err(String::from(
@@ -130,7 +139,7 @@ impl Blockchain {
         for i in 0..chain_length {
             let curr_block = &chain[i];
             if i != 0 {
-                if curr_block.previous_hash == chain[i-1].hash && curr_block.is_valid() {
+                if curr_block.previous_hash == chain[i - 1].hash && curr_block.is_valid() {
                     continue;
                 } else {
                     return false;
@@ -155,6 +164,9 @@ impl Blockchain {
         &mut self,
         transaction_envelope: TransactionEnvelope,
     ) -> Result<String, String> {
+        if self.mempool.iter().any(|t| t.id == transaction_envelope.id) {
+            return Err(String::from("Transaction already exists"));
+        }
         if transaction_envelope.is_valid(&self.balance.clone()) {
             self.mempool.push_back(transaction_envelope);
             return Ok(String::from("Transaction added to mempool"));

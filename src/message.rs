@@ -6,8 +6,12 @@ use crate::transaction::TransactionEnvelope;
 #[derive(Serialize, Deserialize)]
 pub enum P2pMessage {
     Handshake (String),
-    NewTransaction(TransactionEnvelope),
+
+    SubmitTransaction(TransactionEnvelope),
+    PropagateTransaction(TransactionEnvelope),
+
     NewBlock(Block),
+    PropagateBlock(Block),
 
     RequestChain(String),
     ChainResponse(Vec<Block>),
