@@ -32,7 +32,7 @@ fn main() {
 
     
     let port = &args[1];
-    init_tracing(&port);
+    let _guard = init_tracing(&port);
     print_banner(&port);
 
     let seed;

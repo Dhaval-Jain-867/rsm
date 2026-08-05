@@ -1,0 +1,6 @@
+2026-08-04T23:51:36.873266Z  INFO Starting as the genesis node. Waiting for peers...
+2026-08-04T23:51:36.873483Z  INFO Node listening for P2P connections address=127.0.0.1:8001
+2026-08-04T23:51:41.515855Z  INFO tcp_rx{ip=127.0.0.1:46134}:handle_message:handshake{peer=127.0.0.1:8002}: Handshake received
+2026-08-04T23:51:41.515909Z  INFO tcp_rx{ip=127.0.0.1:46134}:handle_message:handshake{peer=127.0.0.1:8002}: Peer list updated total_peers=1
+2026-08-04T23:51:41.516218Z  INFO tcp_rx{ip=127.0.0.1:46138}:handle_message: Sending peer list requester=127.0.0.1:8002
+2026-08-04T23:51:41.516294Z  INFO tcp_rx{ip=127.0.0.1:46140}:handle_message: Serving chain state requester=127.0.0.1:8002

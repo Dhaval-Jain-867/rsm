@@ -36,32 +36,42 @@ impl Node {
                 continue;
             }
 
-            let mut parts = input.split_whitespace();
-            let command = parts.next().unwrap();
+            self.execute_command(input);
+        }
+    }
 
-            match command {
-                "info" => {
-                    let chain = self.blockchain.lock().unwrap();
-                    println!("Blockchain length: {}", chain.chain.len());
-                    println!("Pending transactios in mempool: {}", chain.mempool.len());
-                }
-                "peers" => {
-                    let peers = self.peers.lock().unwrap();
-                    println!("Connected to {} peers : {:?}", peers.len(), *peers);
-                }
-                "help" => {
-                    println!("Available commands -");
-                    println!("info - Show blockchain status");
-                    println!("peers - List connected peers");
-                    println!("exit - Shut down the node");
-                }
-                "exit" => {
-                    println!("Shutting down the node");
-                    break;
-                }
-                _ => {
-                    println!("Unknown command: {}", command);
-                }
+    fn execute_command(&mut self, input: &str) {
+        let mut parts = input.split_whitespace();
+        let command = parts.next().unwrap();
+
+        match command {
+            "help" => {
+                println!("Available commands -");
+                println!("info - Show blockchain status");
+                println!("chain - Get entire blockchain");
+                println!("peers - List connected peers");
+                println!("mine - Mines a block");
+                println!("exit - Shut down the node");
+            }
+            "info" => {
+                self.display_info();
+            }
+            "chain" => {
+                self.display_chain();
+            }
+            "peers" => {
+                let peers = self.peers.lock().unwrap();
+                println!("Connected to {} peers : {:?}", peers.len(), *peers);
+            }
+            "mine" => {
+                self.mine_new_block();
+            }
+            "exit" => {
+                println!("Shutting down the node");
+                std::process::exit(0);
+            }
+            _ => {
+                println!("Unknown command: {}", command);
             }
         }
     }
@@ -118,15 +128,72 @@ impl Node {
         });
     }
 
-    pub fn mine_new_block(&mut self) {
+    fn mine_new_block(&mut self) {
+        println!("Mining");
         let block;
         {
             let mut my_chain = self.blockchain.lock().unwrap();
-            block = self.miner_wallet.mine_block(&mut my_chain).unwrap();
+            block = self.miner_wallet.mine_block(&mut my_chain);
         }
 
-        info!(block_index = block.index, "Successfully minted a new block");
-        self.handle_message(P2pMessage::NewBlock(block));
+        match block {
+            Ok(b) => {
+                info!(block_index = b.index, "Successfully mined a new block");
+                println!("Block #{} mined successfully", b.index);
+                self.handle_message(P2pMessage::NewBlock(b));
+            }
+            Err(e) => {
+                error!("Couldn't mine a new block: {}", e);
+                println!("Error mining new block. check logs");
+            }
+        }
+    }
+
+    fn display_info(&self) {
+        {
+            let chain = self.blockchain.lock().unwrap();
+
+            println!("NODE INFORMATION");
+            println!("Chain Height      : {}", chain.chain.len());
+            println!("Mempool Size      : {}", chain.mempool.len());
+            println!("Connected Peers   : {}", self.peers.lock().unwrap().len());
+
+            if let Some(last_block) = chain.chain.last() {
+                println!("Latest Block      : {}", last_block.index);
+                println!("Latest Hash       : {}", last_block.hash);
+            }
+
+            println!(
+                "Miner Address     : {}",
+                hex::encode(self.miner_wallet.public_key)
+            );
+        }
+    }
+
+    fn display_chain(&self) {
+        let chain = self.blockchain.lock().unwrap();
+
+        println!("BLOCKCHAIN");
+
+        for block in &chain.chain {
+            println!("------------------------------");
+            println!("Block #{}", block.index);
+            println!("Hash         : {}", block.hash);
+            println!("Previous Hash: {}", block.previous_hash);
+            println!("Transactions : {}", block.data.len());
+            println!("Reward       : {}", block.reward.amount);
+        }
+    }
+
+    fn display_peers(&self) {
+        let peers = self.peers.lock().unwrap();
+
+        println!("Total peers: {}", peers.len());
+        println!("CONNECTED PEERS");
+
+        for peer in peers.iter() {
+            println!("{}", peer);
+        }
     }
 
     fn handle_connection(&mut self, mut stream: TcpStream) {
@@ -271,10 +338,6 @@ impl Node {
                             return;
                         }
                     }
-                    println!(
-                        "mempool updated successfully. mempool length: {}",
-                        my_chain.mempool.len()
-                    );
                 }
 
                 let message = P2pMessage::PropagateTransaction(tx);
