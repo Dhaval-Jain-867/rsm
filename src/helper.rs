@@ -1,9 +1,10 @@
-use std::fs;
+use std::{fs, println};
 
 use tracing_appender::non_blocking::WorkerGuard;
 
 pub fn init_tracing(port: &str) -> WorkerGuard {
     fs::create_dir_all("logs").expect("Failed to create logs directory");
+    fs::create_dir_all("wallets").expect("Failed to create wallets directory");
 
     let file_appender = tracing_appender::rolling::never("logs", format!("node_{}.log", port));
 
@@ -18,8 +19,18 @@ pub fn init_tracing(port: &str) -> WorkerGuard {
     guard
 }
 
-pub fn print_banner(port: &str) {
+pub fn print_node_banner(port: &str) {
     println!("🚀 Node started on port {}", port);
     println!("📂 Background events are writing via tracing to 'logs/node_{}.log'", port);
     println!("Type 'help' for commands");
+}
+
+pub fn print_wallet_banner() {
+    println!("New wallet created");
+    println!("Type 'help' for commands");
+}
+
+pub fn print_faucet_banner() {
+    println!("Faucet is available");
+    println!("Open for airdrop requests");
 }

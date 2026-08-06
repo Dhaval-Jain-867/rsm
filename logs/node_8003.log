@@ -1,0 +1,6 @@
+2026-08-05T15:50:22.658482Z  INFO Bootstrapping from seed node seed=127.0.0.1:8001
+2026-08-05T15:50:22.658492Z  INFO Node listening for P2P connections address=127.0.0.1:8003
+2026-08-05T15:50:22.658589Z  INFO Handshake sent peer=127.0.0.1:8001
+2026-08-05T15:50:22.659754Z  INFO tcp_rx{ip=127.0.0.1:32834}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:32834, fd: 6 })}: Received peer list from network received_count=1
+2026-08-05T15:50:22.659888Z  INFO tcp_rx{ip=127.0.0.1:32820}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:32820, fd: 5 })}:sync: Received chain state received_height=1
+2026-08-05T15:50:22.660007Z  INFO tcp_rx{ip=127.0.0.1:32820}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:32820, fd: 5 })}:sync: Chain updated successfully new_height=1

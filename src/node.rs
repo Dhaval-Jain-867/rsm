@@ -2,14 +2,17 @@ use std::collections::VecDeque;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::{println, thread};
+use std::{fs, println, thread};
 
 use crate::Balance;
 use crate::block::{Block, Blockchain};
-use crate::message::P2pMessage;
+use crate::message::ClientMessage::RequestBalance;
+use crate::message::{ClientMessage, NetworkMessage, P2pMessage};
 use crate::miner::Miner;
 use crate::transaction::TransactionEnvelope;
+use crate::wallet::Wallet;
 
+use sha2::digest::consts::True;
 use tracing::{error, info, info_span, instrument, warn};
 
 #[derive(Clone)]
@@ -83,9 +86,17 @@ impl Node {
     }
 
     pub fn new(address: String, seed_node: Option<String>) -> Self {
-        let blockchain = match seed_node {
-            Some(_) => Blockchain::empty(),
-            None => Blockchain::new(1000).unwrap().0,
+        let blockchain;
+        match seed_node {
+            Some(_) => {
+                blockchain = Blockchain::empty();
+            },
+            None => {
+                let g_wallet;
+                (blockchain, g_wallet) = Blockchain::new(1000).unwrap();
+                
+                g_wallet.save_to_disk("wallets/faucet.json");
+            }
         };
         Self {
             address,
@@ -103,8 +114,12 @@ impl Node {
 
             self.peers.lock().unwrap().push(seed_address.clone());
             self.do_handshake(&seed_address);
-            self.broadcast(P2pMessage::RequestPeers(self.address.clone()));
-            self.broadcast(P2pMessage::RequestChain(self.address.clone()));
+            self.broadcast(NetworkMessage::P2p(P2pMessage::RequestPeers(
+                self.address.clone(),
+            )));
+            self.broadcast(NetworkMessage::P2p(P2pMessage::RequestChain(
+                self.address.clone(),
+            )));
         } else {
             info!("Starting as the genesis node. Waiting for peers...");
         }
@@ -140,7 +155,7 @@ impl Node {
             Ok(b) => {
                 info!(block_index = b.index, "Successfully mined a new block");
                 println!("Block #{} mined successfully", b.index);
-                self.handle_message(P2pMessage::NewBlock(b));
+                self.handle_message(NetworkMessage::P2p(P2pMessage::NewBlock(b)), None);
             }
             Err(e) => {
                 error!("Couldn't mine a new block: {}", e);
@@ -205,8 +220,8 @@ impl Node {
 
         let mut buffer = String::new();
         if stream.read_to_string(&mut buffer).is_ok() {
-            if let Ok(message) = serde_json::from_str::<P2pMessage>(&buffer) {
-                self.handle_message(message);
+            if let Ok(message) = serde_json::from_str::<NetworkMessage>(&buffer) {
+                self.handle_message(message, Some(&mut stream));
             } else {
                 warn!("Received unparseable garbage data over TCP");
             }
@@ -214,10 +229,9 @@ impl Node {
     }
 
     #[instrument(skip(self, message))]
-    fn handle_message(&mut self, message: P2pMessage) {
-        println!("\n");
+    fn handle_message(&mut self, message: NetworkMessage, stream: Option<&mut TcpStream>) {
         match message {
-            P2pMessage::Handshake(address) => {
+            NetworkMessage::P2p(P2pMessage::Handshake(address)) => {
                 let _span = info_span!("handshake", peer = %address).entered();
                 info!("Handshake received");
                 {
@@ -228,11 +242,11 @@ impl Node {
                     info!(total_peers = peers.len(), "Peer list updated");
                 }
 
-                let message = P2pMessage::NewPeer(address.clone());
+                let message = NetworkMessage::P2p(P2pMessage::NewPeer(address.clone()));
                 self.broadcast_except(message, address);
             }
 
-            P2pMessage::NewPeer(new_peer) => {
+            NetworkMessage::P2p(P2pMessage::NewPeer(new_peer)) => {
                 let mut my_peers = self.peers.lock().unwrap();
                 if new_peer != self.address && !my_peers.contains(&new_peer) {
                     my_peers.push(new_peer.clone());
@@ -240,17 +254,16 @@ impl Node {
                 info!(new_peer = %new_peer, total_peers = my_peers.len(), "Added new peer to directory");
             }
 
-            P2pMessage::RequestPeers(peer_address) => {
+            NetworkMessage::P2p(P2pMessage::RequestPeers(peer_address)) => {
                 info!(requester = %peer_address, "Sending peer list");
 
                 let peer_list = self.peers.lock().unwrap().clone();
-                let message = P2pMessage::PeerList(peer_list);
+                let message = NetworkMessage::P2p(P2pMessage::PeerList(peer_list));
                 let json = serde_json::to_string(&message).unwrap();
 
                 match TcpStream::connect(&peer_address) {
                     Ok(mut stream) => {
                         stream.write_all(json.as_bytes()).unwrap();
-                        // println!("Peer list sent to peer: {}", peer_address);
                     }
                     Err(_e) => {
                         warn!(peer = %peer_address, "Failed to connect to send peer list");
@@ -258,7 +271,7 @@ impl Node {
                 }
             }
 
-            P2pMessage::PeerList(peer_list) => {
+            NetworkMessage::P2p(P2pMessage::PeerList(peer_list)) => {
                 info!(
                     received_count = peer_list.len(),
                     "Received peer list from network"
@@ -272,11 +285,11 @@ impl Node {
                 }
             }
 
-            P2pMessage::RequestChain(peer_address) => {
+            NetworkMessage::P2p(P2pMessage::RequestChain(peer_address)) => {
                 info!(requester = %peer_address, "Serving chain state");
 
                 let chain = self.blockchain.lock().unwrap().chain.clone();
-                let message = P2pMessage::ChainResponse(chain);
+                let message = NetworkMessage::P2p(P2pMessage::ChainResponse(chain));
                 let json = serde_json::to_string(&message).unwrap();
 
                 match TcpStream::connect(&peer_address) {
@@ -289,7 +302,7 @@ impl Node {
                 }
             }
 
-            P2pMessage::ChainResponse(chain_received) => {
+            NetworkMessage::P2p(P2pMessage::ChainResponse(chain_received)) => {
                 let _span = info_span!("sync").entered();
                 info!(
                     received_height = chain_received.len(),
@@ -321,30 +334,7 @@ impl Node {
                 }
             }
 
-            P2pMessage::SubmitTransaction(tx) => {
-                let _span = info_span!("tx_local").entered();
-                info!("Received new transaction from local wallet");
-
-                {
-                    let mut my_chain = self.blockchain.lock().unwrap();
-                    let mem_add = my_chain.submit_transaction(tx.clone());
-
-                    match mem_add {
-                        Ok(_) => {
-                            info!(mempool_size = my_chain.mempool.len(), "Added to mempool");
-                        }
-                        Err(e) => {
-                            warn!("Transaction rejected: {}", e);
-                            return;
-                        }
-                    }
-                }
-
-                let message = P2pMessage::PropagateTransaction(tx);
-                self.broadcast(message);
-            }
-
-            P2pMessage::PropagateTransaction(tx) => {
+            NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx)) => {
                 let _span = info_span!("tx_network").entered();
 
                 let mut my_chain = self.blockchain.lock().unwrap();
@@ -364,7 +354,7 @@ impl Node {
                 }
             }
 
-            P2pMessage::NewBlock(block) => {
+            NetworkMessage::P2p(P2pMessage::NewBlock(block)) => {
                 let _span = info_span!("block_rx", index = block.index).entered();
                 info!("Received new block from local miner");
                 {
@@ -380,11 +370,11 @@ impl Node {
                         }
                     }
                 }
-                let message = P2pMessage::PropagateBlock(block);
+                let message = NetworkMessage::P2p(P2pMessage::PropagateBlock(block));
                 self.broadcast(message);
             }
 
-            P2pMessage::PropagateBlock(block) => {
+            NetworkMessage::P2p(P2pMessage::PropagateBlock(block)) => {
                 let _span = info_span!("block_rx", index = block.index).entered();
                 info!("Received block from peer network");
 
@@ -401,11 +391,115 @@ impl Node {
                     }
                 }
             }
+
+            NetworkMessage::Client(ClientMessage::SubmitTransaction(tx)) => {
+                let _span = info_span!("tx_local").entered();
+                info!("Received new transaction from wallet");
+
+                let response_msg;
+                {
+                    let mut my_chain = self.blockchain.lock().unwrap();
+                    let mem_add = my_chain.submit_transaction(tx.clone());
+
+                    match mem_add {
+                        Ok(_) => {
+                            info!(mempool_size = my_chain.mempool.len(), "Added to mempool");
+                            response_msg = ClientMessage::TransactionResponse {
+                                success: true,
+                                message: "Transaction added to mempool successfully!".to_string(),
+                            };
+                        }
+                        Err(e) => {
+                            warn!("Transaction rejected: {}", e);
+                            response_msg = ClientMessage::TransactionResponse {
+                                success: false,
+                                message: format!("Transaction rejected: {}", e),
+                            };
+                        }
+                    }
+                }
+
+                if let Some(s) = stream {
+                    let response_network_msg = NetworkMessage::Client(response_msg.clone());
+                    let json = serde_json::to_string(&response_network_msg).unwrap();
+                    let _ = s.write_all(json.as_bytes());
+                } else {
+                    warn!("Couldn't respond to wallet");
+                }
+
+                if let ClientMessage::TransactionResponse { success: true, .. } = response_msg {
+                    let broadcast_message = NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx));
+                    self.broadcast(broadcast_message);
+                }
+            }
+
+            NetworkMessage::Client(ClientMessage::RequestAirdrop(tx)) => {
+                let _span =  info_span!("airdrop_local").entered();
+                info!("Received airdrop request from wallet");
+
+                let response_msg;
+                {
+                    let mut my_chain = self.blockchain.lock().unwrap();
+                    let mem_add = my_chain.submit_transaction(tx.clone());
+
+                    match mem_add {
+                        Ok(_) => {
+                            info!(mempool_size = my_chain.mempool.len(), "Added to mempool");
+                            response_msg = ClientMessage::AirdropResponse {
+                                success: true,
+                                message: "Transaction added to mempool successfully!".to_string(),
+                            };
+                        }
+                        Err(e) => {
+                            warn!("Transaction rejected: {}", e);
+                            response_msg = ClientMessage::AirdropResponse {
+                                success: false,
+                                message: format!("Airdrop rejected: {}", e),
+                            };
+                        }
+                    }
+                }
+
+                if let Some(s) = stream {
+                    let response_network_msg = NetworkMessage::Client(response_msg.clone());
+                    let json = serde_json::to_string(&response_network_msg).unwrap();
+                    let _ = s.write_all(json.as_bytes());
+                } else {
+                    warn!("Couldn't respond to faucet");
+                }
+
+                if let ClientMessage::TransactionResponse { success: true, .. } = response_msg {
+                    let broadcast_message = NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx));
+                    self.broadcast(broadcast_message);
+                }
+            }
+
+            NetworkMessage::Client(RequestBalance(pubkey)) => {
+                info!("Received balance request from wallet");
+
+                let response_msg;
+                {
+                    let mut my_chain = self.blockchain.lock().unwrap();
+                    let balance = my_chain.balance.get_balance(pubkey);
+                    response_msg = NetworkMessage::Client(ClientMessage::BalanceResponse(balance));
+                }
+
+                if let Some(s) = stream {
+                    let json = serde_json::to_string(&response_msg).unwrap();
+                    let _ = s.write_all(json.as_bytes());
+                } else {
+                    warn!("Couldn't respond to wallet");
+                }
+            }
+
+            NetworkMessage::Client(_) => {
+                warn!("Node received unexpected Client message");
+            }
         }
     }
 
     #[instrument(skip(self, message))]
-    pub fn broadcast(&self, message: P2pMessage) {
+    pub fn broadcast(&self, message: NetworkMessage) {
         let message_json = serde_json::to_string(&message).expect("Serializtion failed");
         let peers = self.peers.lock().unwrap().clone(); // cloning so that a slow network connection does not block every other thread that wants to access peers
 
@@ -419,7 +513,7 @@ impl Node {
     }
 
     #[instrument(skip(self, message))]
-    pub fn broadcast_except(&self, message: P2pMessage, address: String) {
+    pub fn broadcast_except(&self, message: NetworkMessage, address: String) {
         let message_json = serde_json::to_string(&message).expect("Serializtion failed");
         let peers = self.peers.lock().unwrap().clone();
 
@@ -435,7 +529,7 @@ impl Node {
     }
 
     pub fn do_handshake(&self, peer: &str) {
-        let message = P2pMessage::Handshake(self.address.clone());
+        let message = NetworkMessage::P2p(P2pMessage::Handshake(self.address.clone()));
         let json = serde_json::to_string(&message).unwrap();
 
         match TcpStream::connect(peer) {
@@ -452,14 +546,5 @@ impl Node {
     pub fn height(&self) -> usize {
         let b_chain = self.blockchain.lock().unwrap();
         b_chain.chain.len()
-    }
-
-    // Helpers
-    pub fn submit_transaction(&mut self, tx: TransactionEnvelope) {
-        self.handle_message(P2pMessage::SubmitTransaction(tx));
-    }
-
-    pub fn submit_block(&mut self, block: Block) {
-        self.handle_message(P2pMessage::NewBlock(block));
     }
 }

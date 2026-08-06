@@ -49,3 +49,8 @@ pub fn hash_block(block: &mut Block) {
         nonce += 1;
     }
 }
+
+pub fn public_key_from_string(s: &str) -> Result<[u8; 32], String> {
+    let bytes = hex::decode(s).map_err(|_| "Invalid hex string".to_string())?;
+    bytes.try_into().map_err(|_| String::from("Public key must be 32 bytes"))
+}

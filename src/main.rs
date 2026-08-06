@@ -1,26 +1,25 @@
 #![allow(warnings)]
 use std::collections::VecDeque;
-use std::{fs, println, thread};
 use std::time::Duration;
+use std::{fs, println, thread};
 
+use crate::balances::Balance;
 use crate::block::Blockchain;
-use crate::helper::{init_tracing, print_banner};
 use crate::miner::Miner;
 use crate::node::Node;
 use crate::wallet::Wallet;
-use crate::balances::Balance;
 
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 mod balances;
 mod block;
 mod hash;
+mod helper;
 mod message;
 mod miner;
 mod node;
 mod transaction;
 mod wallet;
-mod helper;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -30,21 +29,51 @@ fn main() {
         std::process::exit(1);
     }
 
-    
-    let port = &args[1];
-    let _guard = init_tracing(&port);
-    print_banner(&port);
+    let role = args[1].as_str();
+    match role {
+        "wallet" => {
+            println!("Starting wallet");
+            helper::print_wallet_banner();
 
-    let seed;
+            let wallet = Wallet::new();
+            wallet.start_cli(false);
+        }
+        "faucet" => {
+            println!("Starting faucet");
+            let faucet_wallet = Wallet::load_from_disk("wallets/faucet.json");
+            if let Ok(wallet) = faucet_wallet {
+                helper::print_faucet_banner();
+                wallet.start_cli(true);
+            } else {
+                println!("Couldn't load faucet from disk");
+            }
+        }
+        "node" => {
+            if args.len() < 3 {
+                eprintln!("Error: You must provide a port for the node!");
+                eprintln!("Usage: cargo run node <port> [seed_node]");
+                std::process::exit(1);
+            }
 
-    if args.len() > 2 {
-        seed = Some(args[2].clone());
-    } else {
-        seed = None;
+            let port = &args[2];
+            let _guard = helper::init_tracing(&port);
+            helper::print_node_banner(&port);
+
+            let seed;
+
+            if args.len() > 3 {
+                seed = Some(args[3].clone());
+            } else {
+                seed = None;
+            }
+
+            let mut node = Node::bootstrap(format!("127.0.0.1:{}", port), seed);
+            node.start_cli();
+        }
+        _ => {
+            println!("Unknown command: {}", role);
+        }
     }
-
-    let mut node = Node::bootstrap(format!("127.0.0.1:{}", port), seed);
-    node.start_cli();
 }
 
 // #[test]
