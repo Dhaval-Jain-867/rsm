@@ -157,6 +157,18 @@ impl Wallet {
                 let msg = NetworkMessage::Client(ClientMessage::RequestBalance(self.public_key));
                 self.get_balance(node_addr, msg);
             }
+            "save" => {
+                let wallet_name = parts.next();
+                match wallet_name {
+                    Some(wn) => {
+                        let final_addr = format!("wallets/{}.json", wn);
+                        self.save_to_disk(&final_addr);
+                    }
+                    None => {
+                        println!("Command requires wallet save name as well");
+                    }
+                }
+            }
             _ => {
                 println!("Unknown command: {}", command);
             }
@@ -171,6 +183,7 @@ impl Wallet {
                     println!("Failed to connect to node over stream");
                     return;
                 }
+                stream.shutdown(Shutdown::Write).unwrap();
                 println!("Balance requested");
 
                 let mut buffer = String::new();

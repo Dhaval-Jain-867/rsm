@@ -4,3 +4,21 @@
 2026-08-05T15:50:22.659754Z  INFO tcp_rx{ip=127.0.0.1:32834}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:32834, fd: 6 })}: Received peer list from network received_count=1
 2026-08-05T15:50:22.659888Z  INFO tcp_rx{ip=127.0.0.1:32820}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:32820, fd: 5 })}:sync: Received chain state received_height=1
 2026-08-05T15:50:22.660007Z  INFO tcp_rx{ip=127.0.0.1:32820}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:32820, fd: 5 })}:sync: Chain updated successfully new_height=1
+2026-08-08T01:58:43.390504Z  INFO Bootstrapping from seed node seed=127.0.0.1:8002
+2026-08-08T01:58:43.390602Z  INFO Node listening for P2P connections address=127.0.0.1:8003
+2026-08-08T01:58:43.391038Z  INFO Handshake sent peer=127.0.0.1:8002
+2026-08-08T01:58:43.392259Z  INFO tcp_rx{ip=127.0.0.1:37788}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:37788, fd: 5 })}: Received peer list from network received_count=2
+2026-08-08T01:58:43.392627Z  INFO tcp_rx{ip=127.0.0.1:37790}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:37790, fd: 6 })}:sync: Received chain state received_height=1
+2026-08-08T01:58:43.392704Z  INFO tcp_rx{ip=127.0.0.1:37790}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:37790, fd: 6 })}:sync: Chain updated successfully new_height=1
+2026-08-08T02:28:37.531890Z  INFO Bootstrapping from seed node seed=127.0.0.1:8002
+2026-08-08T02:28:37.532318Z  INFO Node listening for P2P connections address=127.0.0.1:8003
+2026-08-08T02:28:37.532426Z  INFO Handshake sent peer=127.0.0.1:8002
+2026-08-08T02:28:37.533073Z  INFO tcp_rx{ip=127.0.0.1:48324}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:48324, fd: 6 })}: Received peer list from network received_count=2
+2026-08-08T02:28:37.533300Z  INFO tcp_rx{ip=127.0.0.1:48338}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:48338, fd: 5 })}:sync: Received chain state received_height=1
+2026-08-08T02:28:37.533369Z  INFO tcp_rx{ip=127.0.0.1:48338}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:48338, fd: 5 })}:sync: Chain updated successfully new_height=1
+2026-08-08T17:38:07.056401Z  INFO Bootstrapping from seed node seed=127.0.0.1:8002
+2026-08-08T17:38:07.056696Z  INFO Node listening for P2P connections address=127.0.0.1:8003
+2026-08-08T17:38:07.056901Z  INFO Handshake sent peer=127.0.0.1:8002
+2026-08-08T17:38:07.058042Z  INFO tcp_rx{ip=127.0.0.1:49410}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:49410, fd: 6 })}: Received peer list from network received_count=1
+2026-08-08T17:38:07.058777Z  INFO tcp_rx{ip=127.0.0.1:49418}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:49418, fd: 4 })}:sync: Received chain state received_height=1
+2026-08-08T17:38:07.058878Z  INFO tcp_rx{ip=127.0.0.1:49418}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:49418, fd: 4 })}:sync: Chain updated successfully new_height=1

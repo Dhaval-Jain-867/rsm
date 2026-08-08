@@ -25,8 +25,12 @@ pub fn print_node_banner(port: &str) {
     println!("Type 'help' for commands");
 }
 
-pub fn print_wallet_banner() {
-    println!("New wallet created");
+pub fn print_wallet_banner(new: bool) {
+    if new {
+        println!("Wallet created succesfully");
+    } else {
+        println!("Wallet loaded succesfully");
+    }
     println!("Type 'help' for commands");
 }
 

@@ -32,11 +32,40 @@ fn main() {
     let role = args[1].as_str();
     match role {
         "wallet" => {
-            println!("Starting wallet");
-            helper::print_wallet_banner();
+            if (args.len() < 3) {
+                println!("Error: You must tell which wallet to load");
+                println!("Usage: cargo run wallet new/load name");
+                std::process::exit(1);
+            }
 
-            let wallet = Wallet::new();
-            wallet.start_cli(false);
+            let way = &args[2];
+            match way.as_str() {
+                "new" => {
+                    let wallet = Wallet::new();
+                    helper::print_wallet_banner(true);
+                    wallet.start_cli(false);
+                }
+                "load" => {
+                    if args.len() < 4 {
+                        println!("Wallet name not mentioned");
+                        std::process::exit(1);
+                    }
+                    let w_name = &args[3];
+                    let wallet_load = Wallet::load_from_disk(w_name);
+                    match wallet_load {
+                        Ok(wallet) => {
+                            helper::print_wallet_banner(false);
+                            wallet.start_cli(false);
+                        }
+                        Err(e) => {
+                            println!("Couldn't load wallet: {}", e);
+                        }
+                    }
+                }
+                _ => {
+                    println!("")
+                }
+            }
         }
         "faucet" => {
             println!("Starting faucet");
