@@ -326,13 +326,41 @@ impl Node {
                     if chain_received.len() > self.height() {
                         let balance_result = Blockchain::rebuild_state(&chain_received);
                         match balance_result {
-                            Ok(balance) => {
-                                
+                            Ok(new_balance) => {
+                                let mut transactions_to_reque = Vec::new();
+
                                 {
                                     let mut blockchain = self.blockchain.lock().unwrap();
-                                    blockchain.chain = chain_received;
-                                    blockchain.balance = balance;
+
+                                    let mut split_index = 0;
+                                    for i in 0..blockchain.chain.len() {
+                                        if i >= chain_received.len() || blockchain.chain[i].hash != chain_received[i].hash {
+                                            split_index = i;
+                                            break;
+                                        }
+                                    }
+
+                                    for i in split_index..blockchain.chain.len() {
+                                        for tx in &blockchain.chain[i].data {
+                                            transactions_to_reque.push(tx.clone());
+                                        }
+                                    }
+
+                                    blockchain.chain = chain_received.clone();
+                                    blockchain.balance = new_balance;
+
+                                    let mut recovered = 0;
+                                    for tx in transactions_to_reque {
+                                        if blockchain.submit_transaction(tx).is_ok() {
+                                            recovered += 1;
+                                        }
+                                    }
+
+                                    if recovered > 0 {
+                                        info!("Recovered {} orphaned transactions back into mempool", recovered);
+                                    }
                                 }
+
                                 info!("Chain updated successfully");
                                 info!("Requesting mempool from peers");
                                 self.broadcast(NetworkMessage::P2p(P2pMessage::RequestMempool(
