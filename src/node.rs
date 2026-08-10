@@ -69,6 +69,19 @@ impl Node {
             "mine" => {
                 self.mine_new_block();
             }
+            "mempool" => {
+                let my_chain = self.blockchain.lock().unwrap();
+                println!("Mempool size: {}", my_chain.mempool.len());
+
+                for tx in &my_chain.mempool {
+                    println!(
+                        "TX: {} -> {}: {}",
+                        hex::encode(tx.payload.payer),
+                        hex::encode(tx.payload.receiver),
+                        tx.payload.amount
+                    );
+                }
+            }
             "exit" => {
                 println!("Shutting down the node");
                 std::process::exit(0);
@@ -90,11 +103,11 @@ impl Node {
         match seed_node {
             Some(_) => {
                 blockchain = Blockchain::empty();
-            },
+            }
             None => {
                 let g_wallet;
-                (blockchain, g_wallet) = Blockchain::new(1000).unwrap();
-                
+                (blockchain, g_wallet) = Blockchain::new(1000000).unwrap();
+
                 g_wallet.save_to_disk("wallets/faucet.json");
             }
         };
@@ -303,7 +316,7 @@ impl Node {
             }
 
             NetworkMessage::P2p(P2pMessage::ChainResponse(chain_received)) => {
-                let _span = info_span!("sync").entered();
+                let _span = info_span!("sync chain").entered();
                 info!(
                     received_height = chain_received.len(),
                     "Received chain state"
@@ -311,16 +324,20 @@ impl Node {
 
                 if Blockchain::validate_chain(&chain_received) {
                     if chain_received.len() > self.height() {
-                        let balance = Blockchain::rebuild_state(&chain_received);
-                        match balance {
+                        let balance_result = Blockchain::rebuild_state(&chain_received);
+                        match balance_result {
                             Ok(balance) => {
-                                let mut blockchain = self.blockchain.lock().unwrap();
-                                blockchain.chain = chain_received;
-                                blockchain.balance = balance;
-                                info!(
-                                    new_height = blockchain.chain.len(),
-                                    "Chain updated successfully"
-                                );
+                                
+                                {
+                                    let mut blockchain = self.blockchain.lock().unwrap();
+                                    blockchain.chain = chain_received;
+                                    blockchain.balance = balance;
+                                }
+                                info!("Chain updated successfully");
+                                info!("Requesting mempool from peers");
+                                self.broadcast(NetworkMessage::P2p(P2pMessage::RequestMempool(
+                                    self.address.clone(),
+                                )));
                             }
                             Err(e) => {
                                 error!("Failed to rebuild state from valid chain: {}", e)
@@ -328,10 +345,59 @@ impl Node {
                         }
                     } else {
                         info!("Received chain is shorter or equal to our version. Ignored.");
+                        info!("Requesting mempool from peers");
+                        self.broadcast(NetworkMessage::P2p(P2pMessage::RequestMempool(
+                            self.address.clone(),
+                        )));
                     }
                 } else {
                     warn!("Received invalid chain data from peer");
                 }
+            }
+
+            NetworkMessage::P2p(P2pMessage::RequestMempool(peer_address)) => {
+                info!(requester = %peer_address, "Sending mempool state to: {}", peer_address);
+
+                let mempool_data: Vec<TransactionEnvelope> = {
+                    let chain = self.blockchain.lock().unwrap();
+                    chain.mempool.iter().cloned().collect()
+                };
+
+                let message = NetworkMessage::P2p(P2pMessage::MempoolResponse(mempool_data));
+                let json = serde_json::to_string(&message).unwrap();
+
+                match TcpStream::connect(&peer_address) {
+                    Ok(mut stream) => {
+                        stream.write_all(json.as_bytes()).unwrap();
+                    }
+                    Err(e) => {
+                        warn!(peer = %peer_address, "Failed to connect to node to send mempool");
+                    }
+                }
+            }
+
+            NetworkMessage::P2p(P2pMessage::MempoolResponse(mempool_data)) => {
+                let _span = info_span!("sync_mempool").entered();
+
+                info!(
+                    received_tx_count = mempool_data.len(),
+                    "Received mempool data from peer"
+                );
+
+                let mut my_chain = self.blockchain.lock().unwrap();
+                let mut added_count = 0;
+
+                for tx in mempool_data {
+                    if my_chain.submit_transaction(tx).is_ok() {
+                        added_count += 1;
+                    }
+                }
+
+                info!(
+                    added = added_count,
+                    current_mempool_size = my_chain.mempool.len(),
+                    "Mempool synchronization complete"
+                );
             }
 
             NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx)) => {
@@ -387,6 +453,15 @@ impl Node {
                     }
                     Err(e) => {
                         warn!("Network block rejected: {}", e);
+
+                        if e == "Block does not extend current chain" {
+                            info!("Block doesn't fit our chain. Requesting full chain sync..");
+
+                            let req = NetworkMessage::P2p(P2pMessage::RequestChain(self.address.clone()));
+                            drop(my_chain);
+                            self.broadcast(req);
+                        }
+
                         return;
                     }
                 }
@@ -428,13 +503,14 @@ impl Node {
                 }
 
                 if let ClientMessage::TransactionResponse { success: true, .. } = response_msg {
-                    let broadcast_message = NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx));
+                    let broadcast_message =
+                        NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx));
                     self.broadcast(broadcast_message);
                 }
             }
 
             NetworkMessage::Client(ClientMessage::RequestAirdrop(tx)) => {
-                let _span =  info_span!("airdrop_local").entered();
+                let _span = info_span!("airdrop_local").entered();
                 info!("Received airdrop request from wallet");
 
                 let response_msg;
@@ -468,8 +544,9 @@ impl Node {
                     warn!("Couldn't respond to faucet");
                 }
 
-                if let ClientMessage::TransactionResponse { success: true, .. } = response_msg {
-                    let broadcast_message = NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx));
+                if let ClientMessage::AirdropResponse { success: true, .. } = response_msg {
+                    let broadcast_message =
+                        NetworkMessage::P2p(P2pMessage::PropagateTransaction(tx));
                     self.broadcast(broadcast_message);
                 }
             }

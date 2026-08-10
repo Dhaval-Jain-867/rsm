@@ -100,6 +100,13 @@ impl Wallet {
                     println!("Invalid call");
                 }
             }
+            "balance" => {
+                let node_addr = parts.next().unwrap_or("127.0.0.1:8001");
+
+                println!("Fetching balance");
+                let msg = NetworkMessage::Client(ClientMessage::RequestBalance(self.public_key));
+                self.get_balance(node_addr, msg);
+            }
             _ => {
                 println!("Unknown command: {}", command);
             }
@@ -118,9 +125,6 @@ impl Wallet {
             "info" => {
                 println!("Public key: {}", self.get_public_key());
                 println!("Private key: {}", self.get_private_key());
-            }
-            "balance" => {
-                let node_addr = parts.next().unwrap_or("127.0.0.1:8001");
             }
             "send" => {
                 let amount_str = parts.next();
@@ -192,7 +196,7 @@ impl Wallet {
                     {
                         println!("Balance: {}", b);
                     } else {
-                        println!("Received unknown response from node");
+                        println!("Received unknown response from node: {}", buffer);
                     }
                 } else {
                     println!("Received no response from node");
@@ -212,6 +216,8 @@ impl Wallet {
                     println!("Failed to send transaction to node over stream");
                     return;
                 }
+
+                stream.shutdown(Shutdown::Write).unwrap();
                 println!("Airdrop requested");
 
                 let mut buffer = String::new();
@@ -222,12 +228,12 @@ impl Wallet {
                     })) = serde_json::from_str::<NetworkMessage>(&buffer)
                     {
                         if success {
-                            println!("Airdrop successful");
+                            println!("Airdrop successful: {}", message);
                         } else {
-                            println!("Airdrop failed");
+                            println!("Airdrop failed: {}", message);
                         }
                     } else {
-                        println!("Received unknown response from node");
+                        println!("Received unknown response from node: {}", buffer);
                     }
                 } else {
                     println!("Received no response from node");
@@ -247,6 +253,7 @@ impl Wallet {
                     println!("Failed to send transaction to node over stream");
                     return;
                 }
+                stream.shutdown(Shutdown::Write).unwrap();
                 println!("Transaction sent");
 
                 let mut buffer = String::new();
@@ -257,12 +264,12 @@ impl Wallet {
                     })) = serde_json::from_str::<NetworkMessage>(&buffer)
                     {
                         if success {
-                            println!("Transaction accepted");
+                            println!("Transaction accepted: {}", message);
                         } else {
-                            println!("Transaction rejected")
+                            println!("Transaction rejected: {}", message);
                         }
                     } else {
-                        println!("Received unknown response from node");
+                        println!("Received unknown response from node: {}", buffer);
                     }
                 } else {
                     println!("Received no response from node");
@@ -329,8 +336,8 @@ impl Wallet {
 
     pub fn save_to_disk(&self, file_path: &str) {
         let json_data = serde_json::to_string_pretty(&self).expect("Failed to serialize wallet");
-        fs::write(file_path, json_data).expect("Failed to save faucet wallet");
-        println!("Faucet wallet saved successfully");
+        fs::write(file_path, json_data).expect("Failed to save wallet");
+        println!("Wallet saved successfully");
     }
 
     pub fn load_from_disk(file_path: &str) -> Result<Self, Box<dyn Error>> {

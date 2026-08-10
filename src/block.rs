@@ -54,7 +54,7 @@ impl Blockchain {
         // safety check but pratically impossible
         if self.chain.is_empty() {
             return Err(String::from(
-                "Genesis block should be minted before adding any other block",
+                "Genesis block should be mined before adding any other block",
             ));
         }
 

@@ -18,6 +18,9 @@ pub enum P2pMessage {
     NewBlock(Block),
     PropagateBlock(Block),
 
+    RequestMempool(String),
+    MempoolResponse(Vec<TransactionEnvelope>),
+
     RequestChain(String),
     ChainResponse(Vec<Block>),
 

@@ -51,7 +51,8 @@ fn main() {
                         std::process::exit(1);
                     }
                     let w_name = &args[3];
-                    let wallet_load = Wallet::load_from_disk(w_name);
+                    let w_addr = format!("wallets/{}.json", w_name);
+                    let wallet_load = Wallet::load_from_disk(&w_addr);
                     match wallet_load {
                         Ok(wallet) => {
                             helper::print_wallet_banner(false);

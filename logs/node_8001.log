@@ -1,41 +1,11 @@
-2026-08-04T23:51:36.873266Z  INFO Starting as the genesis node. Waiting for peers...
-2026-08-04T23:51:36.873483Z  INFO Node listening for P2P connections address=127.0.0.1:8001
-2026-08-04T23:51:41.515855Z  INFO tcp_rx{ip=127.0.0.1:46134}:handle_message:handshake{peer=127.0.0.1:8002}: Handshake received
-2026-08-04T23:51:41.515909Z  INFO tcp_rx{ip=127.0.0.1:46134}:handle_message:handshake{peer=127.0.0.1:8002}: Peer list updated total_peers=1
-2026-08-04T23:51:41.516218Z  INFO tcp_rx{ip=127.0.0.1:46138}:handle_message: Sending peer list requester=127.0.0.1:8002
-2026-08-04T23:51:41.516294Z  INFO tcp_rx{ip=127.0.0.1:46140}:handle_message: Serving chain state requester=127.0.0.1:8002
-2026-08-05T15:47:15.238254Z  INFO Starting as the genesis node. Waiting for peers...
-2026-08-05T15:47:15.238459Z  INFO Node listening for P2P connections address=127.0.0.1:8001
-2026-08-05T15:48:32.656654Z  INFO tcp_rx{ip=127.0.0.1:55302}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:55302, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Handshake received
-2026-08-05T15:48:32.656669Z  INFO tcp_rx{ip=127.0.0.1:55310}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:55310, fd: 6 })}: Sending peer list requester=127.0.0.1:8002
-2026-08-05T15:48:32.656693Z  INFO tcp_rx{ip=127.0.0.1:55302}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:55302, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Peer list updated total_peers=1
-2026-08-05T15:48:32.656718Z  INFO tcp_rx{ip=127.0.0.1:55320}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:55320, fd: 7 })}: Serving chain state requester=127.0.0.1:8002
-2026-08-05T15:50:22.658883Z  INFO tcp_rx{ip=127.0.0.1:50088}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:50088, fd: 5 })}: Sending peer list requester=127.0.0.1:8003
-2026-08-05T15:50:22.658894Z  INFO tcp_rx{ip=127.0.0.1:50104}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:50104, fd: 6 })}: Serving chain state requester=127.0.0.1:8003
-2026-08-05T15:50:22.659034Z  INFO tcp_rx{ip=127.0.0.1:50086}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:50086, fd: 8 })}:handshake{peer=127.0.0.1:8003}: Handshake received
-2026-08-05T15:50:22.659062Z  INFO tcp_rx{ip=127.0.0.1:50086}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:50086, fd: 8 })}:handshake{peer=127.0.0.1:8003}: Peer list updated total_peers=2
-2026-08-05T15:52:24.360818Z  INFO tcp_rx{ip=127.0.0.1:37238}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:37238, fd: 7 })}:tx_local: Received new transaction from wallet
-2026-08-05T15:52:24.367732Z  WARN tcp_rx{ip=127.0.0.1:37238}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:37238, fd: 7 })}:tx_local: Transaction rejected: Can't enter mempool since transaction was invalid
-2026-08-08T01:57:26.256139Z  INFO Starting as the genesis node. Waiting for peers...
-2026-08-08T01:57:26.256539Z  INFO Node listening for P2P connections address=127.0.0.1:8001
-2026-08-08T01:57:55.688642Z  INFO tcp_rx{ip=127.0.0.1:51054}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:51054, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Handshake received
-2026-08-08T01:57:55.688685Z  INFO tcp_rx{ip=127.0.0.1:51054}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:51054, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Peer list updated total_peers=1
-2026-08-08T01:57:55.688735Z  INFO tcp_rx{ip=127.0.0.1:51080}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:51080, fd: 7 })}: Serving chain state requester=127.0.0.1:8002
-2026-08-08T01:57:55.688800Z  INFO tcp_rx{ip=127.0.0.1:51064}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:51064, fd: 6 })}: Sending peer list requester=127.0.0.1:8002
-2026-08-08T01:58:43.392294Z  INFO tcp_rx{ip=127.0.0.1:39008}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:39008, fd: 8 })}: Added new peer to directory new_peer=127.0.0.1:8003 total_peers=2
-2026-08-08T02:28:32.445456Z  INFO Starting as the genesis node. Waiting for peers...
-2026-08-08T02:28:32.445551Z  INFO Node listening for P2P connections address=127.0.0.1:8001
-2026-08-08T02:28:34.715892Z  INFO tcp_rx{ip=127.0.0.1:59686}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:59686, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Handshake received
-2026-08-08T02:28:34.716010Z  INFO tcp_rx{ip=127.0.0.1:59686}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:59686, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Peer list updated total_peers=1
-2026-08-08T02:28:34.716099Z  INFO tcp_rx{ip=127.0.0.1:59718}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:59718, fd: 7 })}: Serving chain state requester=127.0.0.1:8002
-2026-08-08T02:28:34.716168Z  INFO tcp_rx{ip=127.0.0.1:59702}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:59702, fd: 6 })}: Sending peer list requester=127.0.0.1:8002
-2026-08-08T02:28:37.533544Z  INFO tcp_rx{ip=127.0.0.1:59722}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:59722, fd: 8 })}: Added new peer to directory new_peer=127.0.0.1:8003 total_peers=2
-2026-08-08T17:38:01.452524Z  INFO Starting as the genesis node. Waiting for peers...
-2026-08-08T17:38:01.452613Z  INFO Node listening for P2P connections address=127.0.0.1:8001
-2026-08-08T17:38:03.603036Z  INFO tcp_rx{ip=127.0.0.1:49702}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:49702, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Handshake received
-2026-08-08T17:38:03.603087Z  INFO tcp_rx{ip=127.0.0.1:49702}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:49702, fd: 5 })}:handshake{peer=127.0.0.1:8002}: Peer list updated total_peers=1
-2026-08-08T17:38:03.603103Z  INFO tcp_rx{ip=127.0.0.1:49712}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:49712, fd: 6 })}: Sending peer list requester=127.0.0.1:8002
-2026-08-08T17:38:03.603421Z  INFO tcp_rx{ip=127.0.0.1:49718}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:49718, fd: 7 })}: Serving chain state requester=127.0.0.1:8002
-2026-08-08T17:38:07.058376Z  INFO tcp_rx{ip=127.0.0.1:41378}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:41378, fd: 5 })}: Added new peer to directory new_peer=127.0.0.1:8003 total_peers=2
-2026-08-08T17:42:17.619412Z  INFO tcp_rx{ip=127.0.0.1:52388}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:52388, fd: 6 })}:airdrop_local: Received airdrop request from wallet
-2026-08-08T17:42:17.632588Z  INFO tcp_rx{ip=127.0.0.1:52388}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:52388, fd: 6 })}:airdrop_local: Added to mempool mempool_size=1
+2026-08-10T02:02:32.387594Z  INFO Starting as the genesis node. Waiting for peers...
+2026-08-10T02:02:32.387690Z  INFO Node listening for P2P connections address=127.0.0.1:8001
+2026-08-10T02:02:52.081165Z  INFO tcp_rx{ip=127.0.0.1:37226}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:37226, fd: 5 })}:airdrop_local: Received airdrop request from wallet
+2026-08-10T02:02:52.090700Z  INFO tcp_rx{ip=127.0.0.1:37226}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:37226, fd: 5 })}:airdrop_local: Added to mempool mempool_size=1
+2026-08-10T02:03:03.614118Z  INFO tcp_rx{ip=127.0.0.1:45368}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:45368, fd: 6 })}:airdrop_local: Received airdrop request from wallet
+2026-08-10T02:03:03.623504Z  INFO tcp_rx{ip=127.0.0.1:45368}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:45368, fd: 6 })}:airdrop_local: Added to mempool mempool_size=2
+2026-08-10T02:03:45.516204Z  INFO tcp_rx{ip=127.0.0.1:39836}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:39836, fd: 5 })}:handshake{peer=127.0.0.1:8003}: Handshake received
+2026-08-10T02:03:45.516289Z  INFO tcp_rx{ip=127.0.0.1:39836}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:39836, fd: 5 })}:handshake{peer=127.0.0.1:8003}: Peer list updated total_peers=1
+2026-08-10T02:03:45.516303Z  INFO tcp_rx{ip=127.0.0.1:39854}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:39854, fd: 7 })}: Serving chain state requester=127.0.0.1:8003
+2026-08-10T02:03:45.516307Z  INFO tcp_rx{ip=127.0.0.1:39838}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:39838, fd: 6 })}: Sending peer list requester=127.0.0.1:8003
+2026-08-10T02:03:45.516875Z  INFO tcp_rx{ip=127.0.0.1:39870}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8001, peer: 127.0.0.1:39870, fd: 8 })}: Sending mempool state to: 127.0.0.1:8003 requester=127.0.0.1:8003
