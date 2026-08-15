@@ -1,0 +1,107 @@
+<svg viewBox="0 0 1400 980" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+  <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/>
+  </marker>
+  <marker id="arrowAmber" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6 Z" fill="#b45309"/>
+  </marker>
+  <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6 Z" fill="#64748b"/>
+  </marker>
+</defs>
+
+<rect x="0" y="0" width="1400" height="980" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="12"/>
+
+<text x="700" y="38" text-anchor="middle" font-size="24" font-weight="700" fill="#0f172a">Multi-Node P2P Blockchain — Architecture</text>
+<text x="700" y="60" text-anchor="middle" font-size="14" fill="#475569">Every node is an independent process: TCP server + blockchain state + mempool + miner identity, gossiping over a flat peer mesh</text>
+
+<rect x="530" y="90" width="340" height="210" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<rect x="530" y="90" width="340" height="40" rx="10" fill="#2563eb"/>
+<rect x="530" y="110" width="340" height="20" fill="#2563eb"/>
+<text x="700.0" y="110" text-anchor="middle" font-size="15" font-weight="700" fill="white">Node A — Genesis</text>
+<text x="700.0" y="126" text-anchor="middle" font-size="11" fill="#dbeafe">127.0.0.1:8001  ·  no seed</text>
+<rect x="540" y="142.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="548" y="161.0" font-size="11.5" fill="#1e293b">TCP Server — TcpListener, 1 thread/conn</text>
+<rect x="540" y="172.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="548" y="191.0" font-size="11.5" fill="#1e293b">Blockchain (creates genesis block + 1,000,000 supply)</text>
+<rect x="540" y="202.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="548" y="221.0" font-size="11.5" fill="#1e293b">Mempool: VecDeque&lt;TransactionEnvelope&gt;</text>
+<rect x="540" y="232.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="548" y="251.0" font-size="11.5" fill="#1e293b">Peers: Arc&lt;Mutex&lt;Vec&lt;String&gt;&gt;&gt;</text>
+<rect x="540" y="262.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="548" y="281.0" font-size="11.5" fill="#1e293b">Miner identity + creates &amp; saves faucet wallet</text>
+<rect x="40" y="390" width="340" height="210" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<rect x="40" y="390" width="340" height="40" rx="10" fill="#2563eb"/>
+<rect x="40" y="410" width="340" height="20" fill="#2563eb"/>
+<text x="210.0" y="410" text-anchor="middle" font-size="15" font-weight="700" fill="white">Node B</text>
+<text x="210.0" y="426" text-anchor="middle" font-size="11" fill="#dbeafe">127.0.0.1:8002  ·  seed = Node A</text>
+<rect x="50" y="442.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="58" y="461.0" font-size="11.5" fill="#1e293b">TCP Server — TcpListener, 1 thread per connection</text>
+<rect x="50" y="472.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="58" y="491.0" font-size="11.5" fill="#1e293b">Blockchain { chain: Vec&lt;Block&gt;, balance }</text>
+<rect x="50" y="502.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="58" y="521.0" font-size="11.5" fill="#1e293b">Mempool: VecDeque&lt;TransactionEnvelope&gt;</text>
+<rect x="50" y="532.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="58" y="551.0" font-size="11.5" fill="#1e293b">Peers: Arc&lt;Mutex&lt;Vec&lt;String&gt;&gt;&gt;</text>
+<rect x="50" y="562.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="58" y="581.0" font-size="11.5" fill="#1e293b">Miner identity (Ed25519 keypair)</text>
+<rect x="1020" y="390" width="340" height="210" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+<rect x="1020" y="390" width="340" height="40" rx="10" fill="#2563eb"/>
+<rect x="1020" y="410" width="340" height="20" fill="#2563eb"/>
+<text x="1190.0" y="410" text-anchor="middle" font-size="15" font-weight="700" fill="white">Node C</text>
+<text x="1190.0" y="426" text-anchor="middle" font-size="11" fill="#dbeafe">127.0.0.1:8003  ·  seed = Node A</text>
+<rect x="1030" y="442.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="1038" y="461.0" font-size="11.5" fill="#1e293b">TCP Server — TcpListener, 1 thread per connection</text>
+<rect x="1030" y="472.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="1038" y="491.0" font-size="11.5" fill="#1e293b">Blockchain { chain: Vec&lt;Block&gt;, balance }</text>
+<rect x="1030" y="502.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="1038" y="521.0" font-size="11.5" fill="#1e293b">Mempool: VecDeque&lt;TransactionEnvelope&gt;</text>
+<rect x="1030" y="532.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="1038" y="551.0" font-size="11.5" fill="#1e293b">Peers: Arc&lt;Mutex&lt;Vec&lt;String&gt;&gt;&gt;</text>
+<rect x="1030" y="562.0" width="320" height="24.0" rx="5" fill="white" stroke="#94a3b8" stroke-width="1"/>
+<text x="1038" y="581.0" font-size="11.5" fill="#1e293b">Miner identity (Ed25519 keypair)</text>
+<line x1="600" y1="300" x2="260" y2="388" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<line x1="255" y1="388" x2="595" y2="300" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<line x1="800" y1="300" x2="1140" y2="388" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<line x1="1145" y1="388" x2="805" y2="300" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<line x1="380" y1="470" x2="1020" y2="470" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<line x1="1020" y1="490" x2="380" y2="490" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<text x="60" y="318" font-size="11" fill="#1d4ed8" font-weight="600">A ↔ B:</text>
+<text x="60" y="333" font-size="11" fill="#1d4ed8">Handshake · NewPeer</text>
+<text x="60" y="348" font-size="11" fill="#1d4ed8">RequestChain · ChainResponse</text>
+<text x="1000" y="318" font-size="11" fill="#1d4ed8" font-weight="600" text-anchor="end">A ↔ C:</text>
+<text x="1000" y="333" font-size="11" fill="#1d4ed8" text-anchor="end">RequestMempool · MempoolResponse</text>
+<text x="1000" y="348" font-size="11" fill="#1d4ed8" text-anchor="end">PropagateTransaction</text>
+<text x="700" y="505" text-anchor="middle" font-size="11" fill="#1d4ed8" font-weight="600">B ↔ C: NewBlock (local) → PropagateBlock (to peers)</text>
+<text x="700" y="373" text-anchor="middle" font-size="11.5" fill="#1e3a8a" font-style="italic">Flat mesh — every node dials every known peer directly (no gossip fan-out yet)</text>
+<rect x="120" y="700" width="280" height="130" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="260" y="726" text-anchor="middle" font-size="15" font-weight="700" fill="#92400e">Wallet (client)</text>
+<text x="260" y="746" text-anchor="middle" font-size="11" fill="#78350f">Ed25519 keypair, not a peer</text>
+<text x="260" y="770" font-size="11" fill="#1e293b">• SubmitTransaction</text>
+<text x="260" y="787" font-size="11" fill="#1e293b">• RequestBalance</text>
+<text x="260" y="804" font-size="10" fill="#1e293b">connects → sends → reads → closes conn</text>
+<rect x="440" y="700" width="280" height="130" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+<text x="580" y="726" text-anchor="middle" font-size="15" font-weight="700" fill="#92400e">Faucet (client)</text>
+<text x="580" y="746" text-anchor="middle" font-size="11" fill="#78350f">Persisted wallet from genesis</text>
+<text x="580" y="770" font-size="11" fill="#1e293b">• RequestAirdrop</text>
+<text x="580" y="787" font-size="11" fill="#1e293b">(signs a normal transaction)</text>
+<text x="580" y="804" font-size="11" fill="#1e293b">wallets/faucet.json</text>
+<line x1="260" y1="700" x2="210" y2="602" stroke="#b45309" stroke-width="2.2" stroke-dasharray="6,4" marker-end="url(#arrowAmber)"/>
+<line x1="580" y1="700" x2="260" y2="602" stroke="#b45309" stroke-width="2.2" stroke-dasharray="6,4" marker-end="url(#arrowAmber)"/>
+<text x="330" y="655" font-size="11" fill="#92400e" font-weight="600">Client TCP request (one-shot, default → 127.0.0.1:8001)</text>
+<text x="120" y="682" font-size="10.5" fill="#1d4ed8" font-style="italic">On success the node re-broadcasts it as PropagateTransaction (see P2P mesh above)</text>
+<rect x="760" y="700" width="580" height="220" rx="10" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="780" y="726" font-size="14" font-weight="700" fill="#0f172a">Message model — NetworkMessage</text>
+<line x1="780" y1="745" x2="815" y2="745" stroke="#2563eb" stroke-width="3"/>
+<text x="825" y="749" font-size="12" font-weight="600" fill="#1e293b">P2p(...)  — node ↔ node</text>
+<text x="825" y="767" font-size="11" fill="#475569">Handshake · NewPeer · RequestPeers · PeerList</text>
+<text x="825" y="783" font-size="11" fill="#475569">RequestChain · ChainResponse</text>
+<text x="825" y="799" font-size="11" fill="#475569">RequestMempool · MempoolResponse</text>
+<text x="825" y="815" font-size="11" fill="#475569">PropagateTransaction · NewBlock · PropagateBlock</text>
+<line x1="780" y1="838" x2="815" y2="838" stroke="#b45309" stroke-width="3" stroke-dasharray="6,3"/>
+<text x="825" y="842" font-size="12" font-weight="600" fill="#1e293b">Client(...)  — wallet/faucet ↔ node</text>
+<text x="825" y="860" font-size="11" fill="#475569">SubmitTransaction · RequestAirdrop · RequestBalance</text>
+<text x="825" y="876" font-size="11" fill="#475569">TransactionResponse · AirdropResponse · BalanceResponse</text>
+<text x="780" y="900" font-size="10.5" fill="#64748b" font-style="italic">Wallets never enter a node peer list — one-shot TCP clients, not gossip participants.</text>
+</svg>

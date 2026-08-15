@@ -1,1 +1,12 @@
+#build output
 /target
+
+#runtime generated files
+logs/
+wallets/
+
+#rust backup files
+**/*.rs.bk
+
+#Environtment variables
+.env

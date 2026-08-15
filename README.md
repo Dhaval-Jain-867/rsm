@@ -4,7 +4,7 @@ A blockchain built from scratch in Rust, with Proof of Work, signed transactions
 
 The project is intentionally implemented without relying on an existing blockchain framework. The goal is to understand how the major pieces of a blockchain work together: blocks, transactions, balances, wallets, mining, networking, synchronization, and command-line interaction.
 
-> **Current status:** The project currently supports a working multi-node TCP network, transaction and block propagation, wallet-to-node communication, wallet persistence, basic chain synchronization, and mempool synchronization. Advanced fork resolution/chain-selection is still a future step.
+> **Current status:** The project currently supports a working multi-node TCP network, transaction and block propagation, wallet-to-node communication, wallet persistence, mempool synchronization, and basic fork handling with chain synchronization. Advanced fork resolution/chain-selection is still a future step.
 
 ---
 
@@ -63,42 +63,11 @@ Each role has its own interactive command loop.
 
 ## Architecture
 
-The project has three main kinds of processes.
+The project has three main kinds of processes: **nodes** (peers in a flat TCP mesh), **wallets** (one-shot clients), and the **faucet** (a persisted wallet created at genesis).
 
-```text
-                         P2P NETWORK
+![Architecture diagram: three nodes in a P2P mesh, with wallet and faucet as one-shot TCP clients](./architecture.svg)
 
-              ┌──────────────┐
-              │    Node A    │
-              │ Blockchain   │
-              │ Mempool      │
-              │ Miner        │
-              │ TCP Server   │
-              └──────┬───────┘
-                     │
-              P2P TCP messages
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-   ┌──────▼──────┐       ┌──────▼──────┐
-   │   Node B    │       │   Node C    │
-   │ Blockchain  │       │ Blockchain  │
-   │ Mempool     │       │ Mempool     │
-   └─────────────┘       └─────────────┘
-
-
-      Wallet / Faucet
-             │
-             │ Client TCP request
-             ▼
-        ┌────────────┐
-        │    Node    │
-        └────────────┘
-             │
-             │ P2P propagation
-             ▼
-        Other nodes
-```
+Every node runs the same binary and owns its own copy of the chain, mempool, peer list, and miner identity — there is no central server. Wallets and the faucet are deliberately *not* peers: they open a TCP connection to one node, send a single `ClientMessage`, read the response, and close the connection, exactly as shown above.
 
 ### Node
 

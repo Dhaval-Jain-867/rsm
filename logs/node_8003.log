@@ -1,9 +1,0 @@
-2026-08-10T02:03:45.515519Z  INFO Bootstrapping from seed node seed=127.0.0.1:8001
-2026-08-10T02:03:45.515671Z  INFO Node listening for P2P connections address=127.0.0.1:8003
-2026-08-10T02:03:45.515895Z  INFO Handshake sent peer=127.0.0.1:8001
-2026-08-10T02:03:45.516544Z  INFO tcp_rx{ip=127.0.0.1:45516}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:45516, fd: 6 })}: Received peer list from network received_count=1
-2026-08-10T02:03:45.516584Z  INFO tcp_rx{ip=127.0.0.1:45526}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:45526, fd: 5 })}:sync chain: Received chain state received_height=1
-2026-08-10T02:03:45.516640Z  INFO tcp_rx{ip=127.0.0.1:45526}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:45526, fd: 5 })}:sync chain: Chain updated successfully
-2026-08-10T02:03:45.516676Z  INFO tcp_rx{ip=127.0.0.1:45526}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:45526, fd: 5 })}:sync chain: Requesting mempool from peers
-2026-08-10T02:03:45.517110Z  INFO tcp_rx{ip=127.0.0.1:45538}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:45538, fd: 7 })}:sync_mempool: Received mempool data from peer received_tx_count=2
-2026-08-10T02:03:45.529553Z  INFO tcp_rx{ip=127.0.0.1:45538}:handle_message{stream=Some(TcpStream { addr: 127.0.0.1:8003, peer: 127.0.0.1:45538, fd: 7 })}:sync_mempool: Mempool synchronization complete added=2 current_mempool_size=2
