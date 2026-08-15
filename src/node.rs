@@ -54,6 +54,7 @@ impl Node {
                 println!("chain - Get entire blockchain");
                 println!("peers - List connected peers");
                 println!("mine - Mines a block");
+                println!("mempool - Get current mempool state");
                 println!("exit - Shut down the node");
             }
             "info" => {

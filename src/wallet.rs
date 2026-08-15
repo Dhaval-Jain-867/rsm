@@ -70,7 +70,8 @@ impl Wallet {
         match command {
             "help" => {
                 println!("Available commands -");
-                println!("airdrop - get some tokens to a wallet");
+                println!("airdrop - get some tokens to a wallet: <airdrop> <amount> <wallet address> {{node address}}");
+                println!("balance - get faucet balance");
             }
             "airdrop" => {
                 let amount_str = parts.next();
@@ -121,6 +122,9 @@ impl Wallet {
             "help" => {
                 println!("Available commands -");
                 println!("info - Show public & private key");
+                println!("send - transfer funds to an account: <send> <amount> <address> {{node address}}");
+                println!("balance - get your wallet balance");
+                println!("save - save your wallet: <save> <wallet name>");
             }
             "info" => {
                 println!("Public key: {}", self.get_public_key());
