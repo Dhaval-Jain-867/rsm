@@ -20,8 +20,8 @@ pub fn init_tracing(port: &str) -> WorkerGuard {
 }
 
 pub fn print_node_banner(port: &str) {
-    println!("🚀 Node started on port {}", port);
-    println!("📂 Background events are writing via tracing to 'logs/node_{}.log'", port);
+    println!("Node started on port {}", port);
+    println!("Background events are writing via tracing to 'logs/node_{}.log'", port);
     println!("Type 'help' for commands");
 }
 
